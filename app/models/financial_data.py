@@ -57,6 +57,30 @@ class FinancialMetrics(BaseModel):
 
         return data
 
+    def yoy_deltas(self) -> dict[str, tuple[float | None, float | None, bool]]:
+        """Retorna el último valor y delta YoY para cada KPI.
+
+        Los datos vienen ordenados del más reciente al más antiguo,
+        así que [0] es el año más reciente y [1] es el anterior.
+        """
+        import math
+
+        def _safe(values: list[float], key: str, is_pct: bool) -> None:
+            if len(values) >= 2:
+                curr, prev = values[0], values[1]
+                if math.isfinite(curr) and math.isfinite(prev):
+                    deltas[key] = (curr, curr - prev, is_pct)
+                    return
+            if values and math.isfinite(values[0]):
+                deltas[key] = (values[0], None, is_pct)
+
+        deltas: dict[str, tuple[float | None, float | None, bool]] = {}
+        _safe(self.revenue_billions, "Revenue", False)
+        _safe(self.net_margin, "Net Margin", True)
+        _safe(self.fcf_billions, "FCF", False)
+        _safe(self.debt_equity, "Debt/Equity", True)
+        return deltas
+
 
 class NewsItem(BaseModel):
     """Noticia de una acción."""

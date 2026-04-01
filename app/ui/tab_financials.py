@@ -3,24 +3,66 @@
 import streamlit as st
 
 from models import FinancialMetrics
+from services import StockService
 from ui.base_tab import BaseTab
 from utils import draw_bar_chart, draw_multi_line_chart
+
+
+METRIC_COLORS = {
+    "Revenue": "#1f77b4",
+    "Net Income": "#2ca02c",
+    "FCF": "#ff7f0e",
+    "Debt": "#d62728",
+    "Ratios": "#9467bd",
+}
 
 
 class FinancialsTab(BaseTab):
     """Renderiza el tab de finanzas con métricas y gráficos."""
 
-    def render(self, *, ticker: str, metrics: FinancialMetrics, **kwargs) -> None:
-        chart_data = metrics.to_summary_chart_data()
-
-        self._render_summary_chart(ticker, chart_data)
+    def render(
+        self,
+        *,
+        ticker: str,
+        metrics: FinancialMetrics,
+        stock_service: StockService,
+        **kwargs,
+    ) -> None:
+        self._render_kpi_cards(metrics)
         st.markdown("---")
-        self._render_annual_performance(ticker, metrics)
+        self._render_summary_chart(ticker, metrics)
         st.markdown("---")
-        self._render_individual_charts(ticker, metrics)
+        self._render_themed_tabs(ticker, metrics)
+        st.markdown("---")
+        self._render_data_table(stock_service)
 
-    def _render_summary_chart(self, ticker: str, chart_data: dict) -> None:
+    def _render_kpi_cards(self, metrics: FinancialMetrics) -> None:
+        deltas = metrics.yoy_deltas()
+        cols = st.columns(4)
+
+        kpi_config = [
+            ("Revenue", "${val:.2f}B", "{delta:+.2f}B", "normal"),
+            ("Net Margin", "{val:.1f}%", "{delta:+.1f}pp", "normal"),
+            ("FCF", "${val:.2f}B", "{delta:+.2f}B", "normal"),
+            ("Debt/Equity", "{val:.1f}%", "{delta:+.1f}pp", "inverse"),
+        ]
+
+        for col, (key, val_fmt, delta_fmt, delta_color) in zip(cols, kpi_config):
+            with col:
+                if key in deltas:
+                    val, delta, _ = deltas[key]
+                    st.metric(
+                        key,
+                        val_fmt.format(val=val) if val is not None else "N/A",
+                        delta_fmt.format(delta=delta) if delta is not None else None,
+                        delta_color=delta_color,
+                    )
+                else:
+                    st.metric(key, "N/A")
+
+    def _render_summary_chart(self, ticker: str, metrics: FinancialMetrics) -> None:
         st.subheader("Resumen Financiero (5 Años)")
+        chart_data = metrics.to_summary_chart_data()
         if chart_data:
             data = {k: {"x": v.x, "y": v.y} for k, v in chart_data.items()}
             fig = draw_multi_line_chart(data, f"{ticker} - Resumen Financiero", "Valor")
@@ -28,143 +70,107 @@ class FinancialsTab(BaseTab):
         else:
             st.info("No hay suficientes datos para generar el resumen.")
 
-    def _render_annual_performance(
-        self, ticker: str, metrics: FinancialMetrics
-    ) -> None:
-        st.subheader("Rendimiento Financiero Anual")
-
+    def _render_themed_tabs(self, ticker: str, metrics: FinancialMetrics) -> None:
         if not metrics.years:
             st.info("Datos financieros no disponibles.")
             return
 
-        col_f1, col_f2 = st.columns(2)
+        tabs = st.tabs(["Ingresos", "Rentabilidad", "Cash Flow", "Deuda"])
 
-        with col_f1:
-            if metrics.revenue_billions:
-                fig = draw_bar_chart(
-                    metrics.revenue_billions,
-                    metrics.years,
-                    "Ingresos Anuales",
-                    "Billions ($)",
-                )
-                st.pyplot(fig, use_container_width=True)
+        with tabs[0]:
+            col1, col2 = st.columns(2)
+            with col1:
+                if metrics.revenue_billions:
+                    fig = draw_bar_chart(
+                        metrics.revenue_billions,
+                        metrics.years,
+                        "Revenue",
+                        "Billions ($)",
+                        color=METRIC_COLORS["Revenue"],
+                    )
+                    st.pyplot(fig, use_container_width=True)
+            with col2:
+                if metrics.sales_growth:
+                    fig = draw_bar_chart(
+                        metrics.sales_growth,
+                        metrics.years,
+                        "Sales Growth",
+                        "Crecimiento (%)",
+                        is_percent=True,
+                        signed=True,
+                        color=METRIC_COLORS["Ratios"],
+                    )
+                    st.pyplot(fig, use_container_width=True)
 
-        with col_f2:
-            if metrics.net_margin:
-                fig = draw_bar_chart(
-                    metrics.net_margin,
-                    metrics.years,
-                    "Margen Neto (%)",
-                    "Porcentaje",
-                    signed=True,
-                    is_percent=True,
-                )
-                st.pyplot(fig, use_container_width=True)
+        with tabs[1]:
+            col1, col2 = st.columns(2)
+            with col1:
+                if metrics.net_margin:
+                    fig = draw_bar_chart(
+                        metrics.net_margin,
+                        metrics.years,
+                        "Net Margin",
+                        "Margen (%)",
+                        is_percent=True,
+                        signed=True,
+                        color=METRIC_COLORS["Ratios"],
+                    )
+                    st.pyplot(fig, use_container_width=True)
+            with col2:
+                if metrics.roe:
+                    fig = draw_bar_chart(
+                        metrics.roe,
+                        metrics.years,
+                        "ROE",
+                        "ROE (%)",
+                        is_percent=True,
+                        signed=True,
+                        color=METRIC_COLORS["Ratios"],
+                    )
+                    st.pyplot(fig, use_container_width=True)
 
-        st.markdown("---")
-        col_f3, col_f4 = st.columns(2)
-
-        with col_f3:
+        with tabs[2]:
             if metrics.fcf_billions:
                 fig = draw_bar_chart(
                     metrics.fcf_billions,
                     metrics.years,
                     "Free Cash Flow",
-                    "Billions ($)",
+                    "FCF (Billions)",
                     signed=True,
+                    color=METRIC_COLORS["FCF"],
                 )
                 st.pyplot(fig, use_container_width=True)
             else:
                 st.info("Datos de Free Cash Flow no disponibles.")
 
-        with col_f4:
-            if metrics.debt_billions:
-                fig = draw_bar_chart(
-                    metrics.debt_billions,
-                    metrics.years,
-                    "Deuda Total",
-                    "Billions ($)",
-                )
-                st.pyplot(fig, use_container_width=True)
+        with tabs[3]:
+            col1, col2 = st.columns(2)
+            with col1:
+                if metrics.debt_billions:
+                    fig = draw_bar_chart(
+                        metrics.debt_billions,
+                        metrics.years,
+                        "Deuda Total",
+                        "Deuda (Billions)",
+                        color=METRIC_COLORS["Debt"],
+                    )
+                    st.pyplot(fig, use_container_width=True)
+            with col2:
+                if metrics.debt_equity:
+                    fig = draw_bar_chart(
+                        metrics.debt_equity,
+                        metrics.years,
+                        "Deuda/Equity",
+                        "Ratio (%)",
+                        is_percent=True,
+                        color=METRIC_COLORS["Ratios"],
+                    )
+                    st.pyplot(fig, use_container_width=True)
+
+    def _render_data_table(self, stock_service: StockService) -> None:
+        with st.expander("Ver Datos del Estado de Resultados", expanded=False):
+            df = stock_service.get_financials()
+            if df is not None and not df.empty:
+                st.dataframe(df.T, use_container_width=True)
             else:
-                st.info("Datos de deuda no disponibles.")
-
-    def _render_individual_charts(self, ticker: str, metrics: FinancialMetrics) -> None:
-        st.subheader("Gráficos Individuales (5 Años)")
-
-        if not metrics.years:
-            return
-
-        col_g1, col_g2 = st.columns(2)
-
-        with col_g1:
-            if metrics.sales_growth:
-                fig = draw_bar_chart(
-                    metrics.sales_growth,
-                    metrics.years,
-                    f"{ticker} - Crecimiento de Ventas",
-                    "Crecimiento (%)",
-                    is_percent=True,
-                    signed=True,
-                )
-                st.pyplot(fig, use_container_width=True)
-
-        with col_g2:
-            if metrics.net_margin:
-                fig = draw_bar_chart(
-                    metrics.net_margin,
-                    metrics.years,
-                    f"{ticker} - Margen Neto",
-                    "Margen (%)",
-                    is_percent=True,
-                    signed=True,
-                )
-                st.pyplot(fig, use_container_width=True)
-
-        col_g3, col_g4 = st.columns(2)
-
-        with col_g3:
-            if metrics.roe:
-                fig = draw_bar_chart(
-                    metrics.roe,
-                    metrics.years,
-                    f"{ticker} - ROE",
-                    "ROE (%)",
-                    is_percent=True,
-                    signed=True,
-                )
-                st.pyplot(fig, use_container_width=True)
-
-        with col_g4:
-            if metrics.fcf_billions:
-                fig = draw_bar_chart(
-                    metrics.fcf_billions,
-                    metrics.years,
-                    f"{ticker} - Free Cash Flow",
-                    "FCF (Billions)",
-                    signed=True,
-                )
-                st.pyplot(fig, use_container_width=True)
-
-        col_g5, col_g6 = st.columns(2)
-
-        with col_g5:
-            if metrics.debt_billions:
-                fig = draw_bar_chart(
-                    metrics.debt_billions,
-                    metrics.years,
-                    f"{ticker} - Deuda Total",
-                    "Deuda (Billions)",
-                )
-                st.pyplot(fig, use_container_width=True)
-
-        with col_g6:
-            if metrics.debt_equity:
-                fig = draw_bar_chart(
-                    metrics.debt_equity,
-                    metrics.years,
-                    f"{ticker} - Deuda/Equity",
-                    "Ratio (%)",
-                    is_percent=True,
-                )
-                st.pyplot(fig, use_container_width=True)
+                st.info("Datos del estado de resultados no disponibles.")
