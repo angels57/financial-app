@@ -1,6 +1,6 @@
 """Tab de resumen general."""
 
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import streamlit as st
 
 from models import StockInfo
@@ -62,11 +62,45 @@ class SummaryTab(BaseTab):
         st.subheader(f"Historial de Precios ({period})")
         hist = stock_service.get_history(period=period)
         if not hist.empty:
-            fig, ax = plt.subplots(figsize=(12, 4))
-            ax.plot(hist.index, hist["Close"], color="#1f77b4", linewidth=1.5)
-            ax.fill_between(hist.index, hist["Close"], alpha=0.1)
-            ax.set_ylabel(f"Precio ({currency})")
-            ax.grid(True, alpha=0.2)
-            st.pyplot(fig, use_container_width=True)
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(
+                    x=hist.index,
+                    y=hist["Close"],
+                    mode="lines",
+                    name="Precio",
+                    line={"color": "#1f77b4", "width": 1.5},
+                    fill="tozeroy",
+                    fillcolor="rgba(31,119,180,0.1)",
+                    hovertemplate="%{x|%d %b %Y}<br>%{y:,.2f} "
+                    + currency
+                    + "<extra></extra>",
+                )
+            )
+            fig.update_layout(
+                yaxis_title=f"Precio ({currency})",
+                xaxis_rangeslider_visible=True,
+                xaxis={
+                    "rangeselector": {
+                        "buttons": [
+                            {"count": 1, "label": "1M", "step": "month"},
+                            {"count": 3, "label": "3M", "step": "month"},
+                            {"count": 6, "label": "6M", "step": "month"},
+                            {
+                                "count": 1,
+                                "label": "YTD",
+                                "step": "year",
+                                "stepmode": "todate",
+                            },
+                            {"count": 1, "label": "1Y", "step": "year"},
+                            {"label": "Todo", "step": "all"},
+                        ]
+                    },
+                },
+                hovermode="x unified",
+                height=500,
+                margin={"l": 0, "r": 0, "t": 10, "b": 0},
+            )
+            st.plotly_chart(fig, use_container_width=True)
         else:
             st.warning("No hay datos históricos para este periodo.")
