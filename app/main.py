@@ -101,6 +101,83 @@ def main():
                 else:
                     st.info("Financial data not available for this ticker.")
 
+                st.subheader("Free Cash Flow (5 Years)")
+                cashflow = stock.cashflow
+                if cashflow is not None and not cashflow.empty:
+                    if "Free Cash Flow" in cashflow.index:
+                        fcf = cashflow.loc["Free Cash Flow"].iloc[:5]
+                        fig3, ax3 = plt.subplots(figsize=(12, 4))
+                        years = [str(d.year) for d in fcf.index]
+                        values = fcf.values / 1_000_000_000
+                        colors = ["#2ca02c" if v >= 0 else "#d62728" for v in values]
+                        ax3.bar(years, values, color=colors)
+                        ax3.set_title(f"{ticker} - Free Cash Flow", fontsize=14)
+                        ax3.set_xlabel("Year")
+                        ax3.set_ylabel("FCF (Billions)")
+                        ax3.grid(True, alpha=0.3, axis="y")
+                        ax3.axhline(y=0, color="black", linewidth=0.5)
+                        for i, v in enumerate(values):
+                            ax3.text(
+                                i,
+                                v + (0.5 if v >= 0 else -1.5),
+                                f"${v:.1f}B",
+                                ha="center",
+                                fontsize=9,
+                            )
+                        st.pyplot(fig3, use_container_width=True)
+                    else:
+                        st.info("Free Cash Flow data not available for this ticker.")
+                else:
+                    st.info("Cashflow data not available for this ticker.")
+
+                st.subheader("Sales (5 Years)")
+                if financials is not None and not financials.empty:
+                    if "Total Revenue" in financials.index:
+                        sales = financials.loc["Total Revenue"].iloc[:5]
+                        fig4, ax4 = plt.subplots(figsize=(12, 4))
+                        years = [str(d.year) for d in sales.index]
+                        values = sales.values / 1_000_000_000
+                        ax4.bar(years, values, color="#1f77b4")
+                        ax4.set_title(f"{ticker} - Sales", fontsize=14)
+                        ax4.set_xlabel("Year")
+                        ax4.set_ylabel("Sales (Billions)")
+                        ax4.grid(True, alpha=0.3, axis="y")
+                        for i, v in enumerate(values):
+                            ax4.text(i, v + 1, f"${v:.1f}B", ha="center", fontsize=9)
+                        st.pyplot(fig4, use_container_width=True)
+                    else:
+                        st.info("Sales data not available for this ticker.")
+                else:
+                    st.info("Financial data not available for this ticker.")
+
+                st.subheader("Net Margin (5 Years)")
+                if financials is not None and not financials.empty:
+                    if (
+                        "Total Revenue" in financials.index
+                        and "Net Income" in financials.index
+                    ):
+                        revenue = financials.loc["Total Revenue"].iloc[:5]
+                        net_income = financials.loc["Net Income"].iloc[:5]
+                        net_margin = (net_income.values / revenue.values) * 100
+                        fig5, ax5 = plt.subplots(figsize=(12, 4))
+                        years = [str(d.year) for d in revenue.index]
+                        colors = [
+                            "#2ca02c" if v >= 0 else "#d62728" for v in net_margin
+                        ]
+                        ax5.bar(years, net_margin, color=colors)
+                        ax5.set_title(f"{ticker} - Net Margin", fontsize=14)
+                        ax5.set_xlabel("Year")
+                        ax5.set_ylabel("Net Margin (%)")
+                        ax5.grid(True, alpha=0.3, axis="y")
+                        ax5.axhline(y=0, color="black", linewidth=0.5)
+                        for i, v in enumerate(net_margin):
+                            ax5.text(i, v + 1, f"{v:.1f}%", ha="center", fontsize=9)
+                        st.pyplot(fig5, use_container_width=True)
+                    else:
+                        st.info("Net Margin data not available for this ticker.")
+                else:
+                    st.info("Financial data not available for this ticker.")
+
                 logger.info(f"Retrieved price for {ticker}: {price} {currency}")
             except Exception as e:
                 st.error(f"Error fetching data for {ticker}: {str(e)}")
