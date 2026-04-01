@@ -3,6 +3,7 @@ import streamlit as st
 import yfinance as yf
 from core import get_app_logger, init_monitoring
 from config import settings
+from utils import calculate_52_week_delta
 
 logger = get_app_logger("")
 
@@ -35,14 +36,8 @@ def main():
                 st.subheader(f"{ticker} - {full_info.get('shortName', ticker)}")
 
                 col1, col2, col3 = st.columns(3)
-                low_delta = (
-                    ((price - week_52_low) / week_52_low * 100) if week_52_low else None
-                )
-                high_delta = (
-                    ((price - week_52_high) / week_52_high * 100)
-                    if week_52_high
-                    else None
-                )
+                low_delta = calculate_52_week_delta(price, week_52_low)
+                high_delta = calculate_52_week_delta(price, week_52_high)
                 with col1:
                     st.metric("Current Price", f"{currency} {price:,.2f}")
                 with col2:
@@ -66,6 +61,11 @@ def main():
                         f"https://www.tradingview.com/symbols/{ticker}/",
                         use_container_width=True,
                     )
+
+                st.subheader("Price History (5 Years)")
+                hist = stock.history(period="5y")[["Close"]]
+                st.line_chart(hist, use_container_width=True)
+
                 st.subheader("Market Info")
 
                 col4, col5, col6, col7 = st.columns(4)
