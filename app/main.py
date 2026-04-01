@@ -1,9 +1,10 @@
 import streamlit as st
+import matplotlib.pyplot as plt
 
 import yfinance as yf
 from core import get_app_logger, init_monitoring
 from config import settings
-from utils import calculate_52_week_delta
+from utils import calculate_52_week_delta, format_large_number
 
 logger = get_app_logger("")
 
@@ -64,14 +65,40 @@ def main():
 
                 st.subheader("Price History (5 Years)")
                 hist = stock.history(period="5y")[["Close"]]
-                st.line_chart(hist, use_container_width=True)
+                fig, ax = plt.subplots(figsize=(12, 4))
+                ax.plot(hist.index, hist["Close"], color="#1f77b4", linewidth=1.5)
+                ax.set_title(f"{ticker} - 5 Year Price History", fontsize=14)
+                ax.set_xlabel("Date")
+                ax.set_ylabel(f"Price ({currency})")
+                ax.grid(True, alpha=0.3)
+                fig.autofmt_xdate()
+                st.pyplot(fig, use_container_width=True)
+
+                st.subheader("Annual Revenue (5 Years)")
+                financials = stock.financials
+                if financials is not None and not financials.empty:
+                    if "Total Revenue" in financials.index:
+                        revenue = financials.loc["Total Revenue"].iloc[:5]
+                        fig2, ax2 = plt.subplots(figsize=(12, 4))
+                        years = [str(d.year) for d in revenue.index]
+                        ax2.bar(years, revenue.values / 1_000_000_000, color="#2ca02c")
+                        ax2.set_title(f"{ticker} - Annual Revenue", fontsize=14)
+                        ax2.set_xlabel("Year")
+                        ax2.set_ylabel("Revenue (Billions)")
+                        ax2.grid(True, alpha=0.3, axis="y")
+                        for i, v in enumerate(revenue.values / 1_000_000_000):
+                            ax2.text(i, v + 1, f"${v:.1f}B", ha="center", fontsize=9)
+                        st.pyplot(fig2, use_container_width=True)
+                    else:
+                        st.info("Revenue data not available for this ticker.")
+                else:
+                    st.info("Financial data not available for this ticker.")
 
                 st.subheader("Market Info")
 
                 col4, col5, col6, col7 = st.columns(4)
                 col4.metric(
-                    "Market Cap",
-                    f"{info.market_cap:,.0f}" if info.market_cap else "N/A",
+                    "Market Cap", format_large_number(info.market_cap, currency)
                 )
                 col5.metric("Exchange", info.exchange or "N/A")
                 col6.metric(
