@@ -1,15 +1,9 @@
 import streamlit as st
-import matplotlib.pyplot as plt
-import yfinance as yf
 
-from core import get_app_logger, init_monitoring
 from config import settings
-from utils import (
-    calculate_52_week_delta,
-    draw_bar_chart,
-    draw_multi_line_chart,
-    format_large_number,
-)
+from core import get_app_logger, init_monitoring
+from services import FinancialCalculator, StockService
+from ui import FinancialsTab, NewsTab, SummaryTab, TechnicalTab, render_sidebar
 
 logger = get_app_logger("")
 
@@ -20,25 +14,7 @@ def main():
     )
     init_monitoring(dsn=settings.sentry_dsn, environment=settings.environment)
 
-    # --- SIDEBAR ---
-    with st.sidebar:
-        st.title("🚀 Financial Stre")
-        st.markdown("---")
-        ticker = (
-            st.text_input("Buscar Ticker:", value="AAPL", placeholder="Ej: AAPL, TSLA")
-            .upper()
-            .strip()
-        )
-
-        st.subheader("Configuración")
-        period = st.selectbox(
-            "Periodo Histórico", options=["1y", "2y", "5y", "10y", "max"], index=2
-        )
-
-        st.markdown("---")
-        st.info(
-            "Introduce un símbolo de cotización para analizar su rendimiento y estados financieros."
-        )
+    ticker, period = render_sidebar()
 
     if not ticker:
         st.title("Bienvenido a Financial Stre")
@@ -47,491 +23,41 @@ def main():
         )
         return
 
-    # --- DATA FETCHING ---
     with st.spinner(f"Cargando datos de {ticker}..."):
         try:
-            stock = yf.Ticker(ticker)
-            info = stock.fast_info
-            full_info = stock.info
-            price = info.last_price
-            currency = info.currency
+            stock_service = StockService(ticker)
+            calculator = FinancialCalculator()
+            info = stock_service.get_info()
 
-            if price is None:
+            if info.price is None:
                 st.error(f"No se pudo encontrar el precio para: {ticker}")
                 return
 
-            # --- HEADER ---
-            st.title(f"{full_info.get('shortName', ticker)} ({ticker})")
+            st.title(f"{info.short_name} ({ticker})")
 
-            # --- TABS ---
-            tab_summary, tab_financials, tab_tech, tab_news = st.tabs(
-                ["📊 Resumen", "📈 Finanzas", "🔬 Análisis Técnico", "📰 Noticias"]
+            metrics = calculator.compute(
+                financials=stock_service.get_financials(),
+                balance=stock_service.get_balance_sheet(),
+                cashflow=stock_service.get_cashflow(),
+                pe_ratio=info.pe_ratio,
             )
 
-            # --- TAB 1: RESUMEN ---
-            with tab_summary:
-                col1, col2, col3 = st.columns(3)
-                low_52 = full_info.get("fiftyTwoWeekLow")
-                high_52 = full_info.get("fiftyTwoWeekHigh")
-                low_delta = calculate_52_week_delta(price, low_52)
-                high_delta = calculate_52_week_delta(price, high_52)
+            tabs = [
+                SummaryTab(title="📊 Resumen"),
+                FinancialsTab(title="📈 Finanzas"),
+                TechnicalTab(title="🔬 Análisis Técnico"),
+                NewsTab(title="📰 Noticias", logger=logger),
+            ]
 
-                with col1:
-                    st.metric("Precio Actual", f"{currency} {price:,.2f}")
-                with col2:
-                    st.metric(
-                        "Mínimo 52 Semanas",
-                        f"{currency} {low_52:,.2f}" if low_52 else "N/A",
-                        f"{low_delta:+.2f}%" if low_delta else None,
-                    )
-                with col3:
-                    st.metric(
-                        "Máximo 52 Semanas",
-                        f"{currency} {high_52:,.2f}" if high_52 else "N/A",
-                        f"{high_delta:+.2f}%" if high_delta else None,
-                    )
-
-                st.markdown("---")
-
-                c1, c2, c3, c4 = st.columns(4)
-                c1.metric("Market Cap", format_large_number(info.market_cap, currency))
-                pe_ratio = full_info.get("trailingPE")
-                c2.metric("P/E Ratio", f"{pe_ratio:.2f}" if pe_ratio else "N/A")
-                c3.metric("Volumen", f"{info.last_volume:,.0f}")
-                with c4:
-                    st.link_button(
-                        "📈 Ver en TradingView",
-                        f"https://www.tradingview.com/symbols/{ticker}/",
-                        use_container_width=True,
-                    )
-
-                st.subheader(f"Historial de Precios ({period})")
-                hist = stock.history(period=period)[["Close"]]
-                if not hist.empty:
-                    fig, ax = plt.subplots(figsize=(12, 4))
-                    ax.plot(hist.index, hist["Close"], color="#1f77b4", linewidth=1.5)
-                    ax.fill_between(hist.index, hist["Close"], alpha=0.1)
-                    ax.set_ylabel(f"Precio ({currency})")
-                    ax.grid(True, alpha=0.2)
-                    st.pyplot(fig, use_container_width=True)
-                else:
-                    st.warning("No hay datos históricos para este periodo.")
-
-            # --- TAB 2: FINANZAS ---
-            with tab_financials:
-                financials = stock.financials
-                cashflow = stock.cashflow
-                balance = stock.balance_sheet
-
-                chart_data = {}
-                if (
-                    financials is not None
-                    and not financials.empty
-                    and balance is not None
-                    and not balance.empty
-                ):
-                    if "Total Revenue" in financials.index:
-                        rev = financials.loc["Total Revenue"].iloc[:5]
-                        years = [str(d.year) for d in rev.index]
-                        prev_rev = None
-                        sales_growth = []
-                        for r in rev.values:
-                            if prev_rev:
-                                sales_growth.append(((r - prev_rev) / prev_rev) * 100)
-                            else:
-                                sales_growth.append(0)
-                            prev_rev = r
-                        chart_data["Crecimiento Ventas"] = {
-                            "x": years,
-                            "y": sales_growth,
-                        }
-
-                    if (
-                        "Net Income" in financials.index
-                        and "Total Revenue" in financials.index
-                    ):
-                        rev = financials.loc["Total Revenue"].iloc[:5]
-                        ni = financials.loc["Net Income"].iloc[:5]
-                        years = [str(d.year) for d in rev.index]
-                        margin = (ni.values / rev.values) * 100
-                        chart_data["Margen Neto (%)"] = {
-                            "x": years,
-                            "y": margin.tolist(),
-                        }
-
-                    if (
-                        "Net Income" in financials.index
-                        and "Stockholders Equity" in balance.index
-                    ):
-                        ni = financials.loc["Net Income"].iloc[:5]
-                        equity = balance.loc["Stockholders Equity"].iloc[:5]
-                        years = [str(d.year) for d in ni.index]
-                        if len(ni) == len(equity):
-                            roe = (ni.values / equity.values) * 100
-                            chart_data["ROE (%)"] = {"x": years, "y": roe.tolist()}
-
-                    if (
-                        cashflow is not None
-                        and not cashflow.empty
-                        and "Free Cash Flow" in cashflow.index
-                    ):
-                        fcf = cashflow.loc["Free Cash Flow"].iloc[:5]
-                        years = [str(d.year) for d in fcf.index]
-                        chart_data["FCF"] = {
-                            "x": years,
-                            "y": (fcf.values / 1e9).tolist(),
-                        }
-
-                    if (
-                        "Total Debt" in balance.index
-                        and "Stockholders Equity" in balance.index
-                    ):
-                        debt = balance.loc["Total Debt"].iloc[:5]
-                        equity = balance.loc["Stockholders Equity"].iloc[:5]
-                        years = [str(d.year) for d in debt.index]
-                        if len(debt) == len(equity):
-                            debt_ratio = (debt.values / equity.values) * 100
-                            chart_data["Deuda/Equity (%)"] = {
-                                "x": years,
-                                "y": debt_ratio.tolist(),
-                            }
-
-                    pe_ratio = full_info.get("trailingPE")
-                    if pe_ratio and years:
-                        chart_data["PER"] = {"x": [years[-1]], "y": [pe_ratio]}
-
-                st.subheader("Resumen Financiero (5 Años)")
-                if chart_data:
-                    fig_summary = draw_multi_line_chart(
-                        chart_data, f"{ticker} - Resumen Financiero", "Valor"
-                    )
-                    st.pyplot(fig_summary, use_container_width=True)
-                else:
-                    st.info("No hay suficientes datos para generar el resumen.")
-
-                st.markdown("---")
-                st.subheader("Rendimiento Financiero Anual")
-
-                if financials is not None and not financials.empty:
-                    col_f1, col_f2 = st.columns(2)
-
-                    with col_f1:
-                        if "Total Revenue" in financials.index:
-                            rev = financials.loc["Total Revenue"].iloc[:5]
-                            fig_rev = draw_bar_chart(
-                                rev.values / 1e9,
-                                [str(d.year) for d in rev.index],
-                                "Ingresos Anuales",
-                                "Billions ($)",
-                            )
-                            st.pyplot(fig_rev, use_container_width=True)
-
-                    with col_f2:
-                        if (
-                            "Net Income" in financials.index
-                            and "Total Revenue" in financials.index
-                        ):
-                            rev = financials.loc["Total Revenue"].iloc[:5]
-                            ni = financials.loc["Net Income"].iloc[:5]
-                            margin = (ni.values / rev.values) * 100
-                            fig_margin = draw_bar_chart(
-                                margin,
-                                [str(d.year) for d in rev.index],
-                                "Margen Neto (%)",
-                                "Porcentaje",
-                                signed=True,
-                                is_percent=True,
-                            )
-                            st.pyplot(fig_margin, use_container_width=True)
-
-                    st.markdown("---")
-                    col_f3, col_f4 = st.columns(2)
-
-                    with col_f3:
-                        if (
-                            cashflow is not None
-                            and not cashflow.empty
-                            and "Free Cash Flow" in cashflow.index
-                        ):
-                            fcf = cashflow.loc["Free Cash Flow"].iloc[:5]
-                            fig_fcf = draw_bar_chart(
-                                fcf.values / 1e9,
-                                [str(d.year) for d in fcf.index],
-                                "Free Cash Flow",
-                                "Billions ($)",
-                                signed=True,
-                            )
-                            st.pyplot(fig_fcf, use_container_width=True)
-                        else:
-                            st.info("Datos de Free Cash Flow no disponibles.")
-
-                    with col_f4:
-                        balance = stock.balance_sheet
-                        if balance is not None and not balance.empty:
-                            if "Total Debt" in balance.index:
-                                debt = balance.loc["Total Debt"].iloc[:5]
-                                fig_debt = draw_bar_chart(
-                                    debt.values / 1e9,
-                                    [str(d.year) for d in debt.index],
-                                    "Deuda Total",
-                                    "Billions ($)",
-                                )
-                                st.pyplot(fig_debt, use_container_width=True)
-                            else:
-                                st.info("Datos de deuda no disponibles.")
-                        else:
-                            st.info("Datos de balance no disponibles.")
-
-                st.markdown("---")
-                st.subheader("Resumen Financiero (5 Años)")
-
-                if financials is not None and not financials.empty:
-                    balance = stock.balance_sheet
-                    if balance is not None and not balance.empty:
-                        chart_data = {}
-
-                        if "Total Revenue" in financials.index:
-                            rev = financials.loc["Total Revenue"].iloc[:5]
-                            years = [str(d.year) for d in rev.index]
-                            prev_rev = None
-                            sales_growth = []
-                            for r in rev.values:
-                                if prev_rev:
-                                    sales_growth.append(
-                                        ((r - prev_rev) / prev_rev) * 100
-                                    )
-                                else:
-                                    sales_growth.append(0)
-                                prev_rev = r
-                            chart_data["Crecimiento Ventas"] = {
-                                "x": years,
-                                "y": sales_growth,
-                            }
-
-                        if (
-                            "Net Income" in financials.index
-                            and "Total Revenue" in financials.index
-                        ):
-                            rev = financials.loc["Total Revenue"].iloc[:5]
-                            ni = financials.loc["Net Income"].iloc[:5]
-                            years = [str(d.year) for d in rev.index]
-                            margin = (ni.values / rev.values) * 100
-                            chart_data["Margen Neto (%)"] = {
-                                "x": years,
-                                "y": margin.tolist(),
-                            }
-
-                        if (
-                            "Net Income" in financials.index
-                            and "Stockholders Equity" in balance.index
-                        ):
-                            ni = financials.loc["Net Income"].iloc[:5]
-                            equity = balance.loc["Stockholders Equity"].iloc[:5]
-                            years = [str(d.year) for d in ni.index]
-                            if len(ni) == len(equity):
-                                roe = (ni.values / equity.values) * 100
-                                chart_data["ROE (%)"] = {"x": years, "y": roe.tolist()}
-
-                        if (
-                            cashflow is not None
-                            and not cashflow.empty
-                            and "Free Cash Flow" in cashflow.index
-                        ):
-                            fcf = cashflow.loc["Free Cash Flow"].iloc[:5]
-                            years = [str(d.year) for d in fcf.index]
-                            chart_data["FCF"] = {
-                                "x": years,
-                                "y": (fcf.values / 1e9).tolist(),
-                            }
-
-                        if (
-                            "Total Debt" in balance.index
-                            and "Stockholders Equity" in balance.index
-                        ):
-                            debt = balance.loc["Total Debt"].iloc[:5]
-                            equity = balance.loc["Stockholders Equity"].iloc[:5]
-                            years = [str(d.year) for d in debt.index]
-                            if len(debt) == len(equity):
-                                debt_ratio = (debt.values / equity.values) * 100
-                                chart_data["Deuda/Equity (%)"] = {
-                                    "x": years,
-                                    "y": debt_ratio.tolist(),
-                                }
-
-                        pe_ratio = full_info.get("trailingPE")
-                        if pe_ratio:
-                            chart_data["PER"] = {
-                                "x": [years[-1] if years else "N/A"],
-                                "y": [pe_ratio],
-                            }
-
-                        st.markdown("---")
-                        st.subheader("Resumen Financiero (5 Años)")
-                        if chart_data:
-                            fig_summary = draw_multi_line_chart(
-                                chart_data, f"{ticker} - Resumen Financiero", "Valor"
-                            )
-                            st.pyplot(fig_summary, use_container_width=True)
-                        else:
-                            st.info("No hay suficientes datos para generar el resumen.")
-
-                        st.markdown("---")
-                        st.subheader("Gráficos Individuales (5 Años)")
-
-                        col_g1, col_g2 = st.columns(2)
-
-                        with col_g1:
-                            if "Total Revenue" in financials.index:
-                                rev = financials.loc["Total Revenue"].iloc[:5]
-                                years = [str(d.year) for d in rev.index]
-                                prev_rev = None
-                                sales_growth = []
-                                for r in rev.values:
-                                    if prev_rev:
-                                        sales_growth.append(
-                                            ((r - prev_rev) / prev_rev) * 100
-                                        )
-                                    else:
-                                        sales_growth.append(0)
-                                    prev_rev = r
-                                fig_sg = draw_bar_chart(
-                                    sales_growth,
-                                    years,
-                                    f"{ticker} - Crecimiento de Ventas",
-                                    "Crecimiento (%)",
-                                    is_percent=True,
-                                    signed=True,
-                                )
-                                st.pyplot(fig_sg, use_container_width=True)
-
-                        with col_g2:
-                            if (
-                                "Net Income" in financials.index
-                                and "Total Revenue" in financials.index
-                            ):
-                                rev = financials.loc["Total Revenue"].iloc[:5]
-                                ni = financials.loc["Net Income"].iloc[:5]
-                                years = [str(d.year) for d in rev.index]
-                                margin = (ni.values / rev.values) * 100
-                                fig_m = draw_bar_chart(
-                                    margin,
-                                    years,
-                                    f"{ticker} - Margen Neto",
-                                    "Margen (%)",
-                                    is_percent=True,
-                                    signed=True,
-                                )
-                                st.pyplot(fig_m, use_container_width=True)
-
-                        col_g3, col_g4 = st.columns(2)
-
-                        with col_g3:
-                            if (
-                                "Net Income" in financials.index
-                                and "Stockholders Equity" in balance.index
-                            ):
-                                ni = financials.loc["Net Income"].iloc[:5]
-                                equity = balance.loc["Stockholders Equity"].iloc[:5]
-                                years = [str(d.year) for d in ni.index]
-                                if len(ni) == len(equity):
-                                    roe = (ni.values / equity.values) * 100
-                                    fig_roe = draw_bar_chart(
-                                        roe,
-                                        years,
-                                        f"{ticker} - ROE",
-                                        "ROE (%)",
-                                        is_percent=True,
-                                        signed=True,
-                                    )
-                                    st.pyplot(fig_roe, use_container_width=True)
-
-                        with col_g4:
-                            if (
-                                cashflow is not None
-                                and not cashflow.empty
-                                and "Free Cash Flow" in cashflow.index
-                            ):
-                                fcf = cashflow.loc["Free Cash Flow"].iloc[:5]
-                                years = [str(d.year) for d in fcf.index]
-                                fig_fcf = draw_bar_chart(
-                                    fcf.values / 1e9,
-                                    years,
-                                    f"{ticker} - Free Cash Flow",
-                                    "FCF (Billions)",
-                                    signed=True,
-                                )
-                                st.pyplot(fig_fcf, use_container_width=True)
-
-                        col_g5, col_g6 = st.columns(2)
-
-                        with col_g5:
-                            if "Total Debt" in balance.index:
-                                debt = balance.loc["Total Debt"].iloc[:5]
-                                years = [str(d.year) for d in debt.index]
-                                fig_d = draw_bar_chart(
-                                    debt.values / 1e9,
-                                    years,
-                                    f"{ticker} - Deuda Total",
-                                    "Deuda (Billions)",
-                                )
-                                st.pyplot(fig_d, use_container_width=True)
-
-                        with col_g6:
-                            if (
-                                "Total Debt" in balance.index
-                                and "Stockholders Equity" in balance.index
-                            ):
-                                debt = balance.loc["Total Debt"].iloc[:5]
-                                equity = balance.loc["Stockholders Equity"].iloc[:5]
-                                years = [str(d.year) for d in debt.index]
-                                if len(debt) == len(equity):
-                                    debt_ratio = (debt.values / equity.values) * 100
-                                    fig_dr = draw_bar_chart(
-                                        debt_ratio,
-                                        years,
-                                        f"{ticker} - Deuda/Equity",
-                                        "Ratio (%)",
-                                        is_percent=True,
-                                    )
-                                    st.pyplot(fig_dr, use_container_width=True)
-                    else:
-                        st.info("Datos de balance no disponibles.")
-                else:
-                    st.info("Datos financieros no disponibles.")
-
-            # --- TAB 3: ANÁLISIS TÉCNICO ---
-            with tab_tech:
-                st.subheader("Indicadores Técnicos")
-                st.info(
-                    "Sección en desarrollo. Aquí se mostrarán RSI, MACD y Medias Móviles."
-                )
-
-            # --- TAB 4: NOTICIAS ---
-            with tab_news:
-                st.subheader(f"Últimas Noticias de {ticker}")
-                try:
-                    news = stock.news
-                    if news:
-                        for item in news[:5]:
-                            title = item.get("title")
-                            link = item.get("link")
-                            publisher = item.get("publisher", "Fuente desconocida")
-
-                            if title and link:
-                                with st.container():
-                                    st.write(f"**{title}**")
-                                    st.caption(
-                                        f"Fuente: {publisher} | [Leer más]({link})"
-                                    )
-                                    st.markdown("---")
-                    else:
-                        st.info(
-                            "No se encontraron noticias recientes para este ticker."
-                        )
-                except Exception as news_err:
-                    st.warning("No se pudieron cargar las noticias en este momento.")
-                    logger.warning(
-                        f"Error al cargar noticias de {ticker}: {str(news_err)}"
+            st_tabs = st.tabs([t.title for t in tabs])
+            for tab, st_tab in zip(tabs, st_tabs):
+                with st_tab:
+                    tab.render(
+                        stock_service=stock_service,
+                        info=info,
+                        period=period,
+                        ticker=ticker,
+                        metrics=metrics,
                     )
 
             logger.info(f"Dashboard actualizado para {ticker}")
