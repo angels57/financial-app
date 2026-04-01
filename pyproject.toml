@@ -8,8 +8,10 @@ dependencies = [
     "matplotlib>=3.10.8",
     "pandas>=3.0.2",
     "pydantic>=2.12.5",
+    "pydantic-settings>=2.13.1",
     "sentry-sdk>=2.57.0",
     "streamlit>=1.56.0",
+    "watchdog>=6.0.0",
     "yfinance>=1.2.0",
 ]
 
