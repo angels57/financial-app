@@ -32,7 +32,6 @@ def main():
 
                 week_52_low = full_info.get("fiftyTwoWeekLow")
                 week_52_high = full_info.get("fiftyTwoWeekHigh")
-                prev_close = info.previous_close
 
                 st.subheader(f"{ticker} - {full_info.get('shortName', ticker)}")
 
@@ -55,6 +54,14 @@ def main():
                     )
 
                 st.markdown("---")
+                st.subheader("Market Info")
+
+                col4, col5, col6, col7 = st.columns(4)
+                pe_ratio = full_info.get("trailingPE")
+                col4.metric(
+                    "Market Cap", format_large_number(info.market_cap, currency)
+                )
+                col5.metric("P/E Ratio", f"{pe_ratio:.2f}" if pe_ratio else "N/A")
                 col_tv = st.columns([1, 3])
                 with col_tv[0]:
                     st.link_button(
@@ -93,22 +100,6 @@ def main():
                         st.info("Revenue data not available for this ticker.")
                 else:
                     st.info("Financial data not available for this ticker.")
-
-                st.subheader("Market Info")
-
-                col4, col5, col6, col7 = st.columns(4)
-                col4.metric(
-                    "Market Cap", format_large_number(info.market_cap, currency)
-                )
-                col5.metric("Exchange", info.exchange or "N/A")
-                col6.metric(
-                    "Previous Close",
-                    f"{currency} {prev_close:,.2f}" if prev_close else "N/A",
-                )
-                change_pct = (
-                    ((price - prev_close) / prev_close * 100) if prev_close else 0
-                )
-                col7.metric("Daily Change", f"{change_pct:+.2f}%")
 
                 logger.info(f"Retrieved price for {ticker}: {price} {currency}")
             except Exception as e:
