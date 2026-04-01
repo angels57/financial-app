@@ -41,3 +41,23 @@ def draw_bar_chart(
             suffix = "B" if not is_percent else "%"
             ax.text(i, v + offset, f"{prefix}{v:.1f}{suffix}", ha="center", fontsize=9)
     return fig
+
+
+def draw_multi_line_chart(
+    data: dict,
+    title: str,
+    ylabel: str,
+    is_percent: bool = False,
+) -> plt.Figure:
+    fig, ax = plt.subplots(figsize=(12, 5))
+    for label, values in data.items():
+        ax.plot(values["x"], values["y"], marker="o", linewidth=2, label=label)
+    ax.set_title(title, fontsize=14)
+    ax.set_xlabel("Year")
+    ax.set_ylabel(ylabel)
+    ax.grid(True, alpha=0.3)
+    ax.legend(loc="best", framealpha=0.9)
+    if is_percent:
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.1f}%"))
+    fig.autofmt_xdate()
+    return fig
