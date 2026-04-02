@@ -11,13 +11,13 @@ class PricesTab(BaseTab):
 
     def render(self, *, info: StockInfo, **kwargs) -> None:
         t = info.ticker
-        shares, per, ps, pfcf, beneficios, ventas, fcf = self._render_inputs(info, t)
+        per, ps, pfcf, beneficios, ventas, fcf = self._render_inputs(info, t)
         buy_prices = self._render_buy_prices(
-            shares, per, ps, pfcf, beneficios, ventas, fcf
+            per, ps, pfcf, beneficios, ventas, fcf, info, t
         )
 
         st.markdown("---")
-        future_avg = self._render_future_prices(shares, per, ps, pfcf, t)
+        future_avg = self._render_future_prices(per, ps, pfcf, info, t)
 
         st.markdown("---")
         self._render_returns(info.price, future_avg, info.dividend_yield, t)
@@ -28,7 +28,6 @@ class PricesTab(BaseTab):
     def _render_inputs(self, info: StockInfo, t: str) -> tuple:
         st.subheader("Datos Fundamentales")
 
-        shares_default = float((info.shares_outstanding or 0) / 1e6)
         per_default = float(info.pe_ratio or 0)
         ps_default = float(info.price_to_sales or 0)
         pfcf_default = float(info.price_to_fcf or 0)
@@ -40,13 +39,6 @@ class PricesTab(BaseTab):
 
         with col1:
             st.markdown("**Ratios Promedio**")
-            shares = st.number_input(
-                "Acciones en circulación (M)",
-                value=shares_default,
-                min_value=0.0,
-                format="%.2f",
-                key=f"shares_{t}",
-            )
             per = st.number_input(
                 "PER promedio",
                 value=per_default,
@@ -91,19 +83,29 @@ class PricesTab(BaseTab):
                 key=f"fcf_{t}",
             )
 
-        return shares, per, ps, pfcf, beneficios, ventas, fcf
+        return per, ps, pfcf, beneficios, ventas, fcf
 
     def _render_buy_prices(
         self,
-        shares: float,
         per: float,
         ps: float,
         pfcf: float,
         beneficios: float,
         ventas: float,
         fcf: float,
+        info: StockInfo,
+        t: str,
     ) -> float:
         st.subheader("Precios de Compra según Ratios")
+
+        shares_default = float((info.shares_outstanding or 0) / 1e6)
+        shares = st.number_input(
+            "Acciones en circulación (M)",
+            value=shares_default,
+            min_value=0.0,
+            format="%.2f",
+            key=f"shares_{t}",
+        )
 
         precio_per = (beneficios / shares) * per if shares > 0 and per > 0 else 0
         precio_ps = (ventas / shares) * ps if shares > 0 and ps > 0 else 0
@@ -161,13 +163,15 @@ class PricesTab(BaseTab):
 
     def _render_future_prices(
         self,
-        shares: float,
         per: float,
         ps: float,
         pfcf: float,
+        info: StockInfo,
         t: str = "",
     ) -> float:
         st.subheader("Precios Futuros (Proyección)")
+
+        shares = st.session_state.get(f"shares_{t}", 0.0)
 
         col1, col2, col3 = st.columns(3)
         with col1:
