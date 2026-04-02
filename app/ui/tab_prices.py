@@ -10,21 +10,22 @@ class PricesTab(BaseTab):
     """Calcula precios de compra y futuros según múltiplos financieros."""
 
     def render(self, *, info: StockInfo, **kwargs) -> None:
-        shares, per, ps, pfcf, beneficios, ventas, fcf = self._render_inputs(info)
+        t = info.ticker
+        shares, per, ps, pfcf, beneficios, ventas, fcf = self._render_inputs(info, t)
         buy_prices = self._render_buy_prices(
             shares, per, ps, pfcf, beneficios, ventas, fcf
         )
 
         st.markdown("---")
-        future_avg = self._render_future_prices(shares, per, ps, pfcf)
+        future_avg = self._render_future_prices(shares, per, ps, pfcf, t)
 
         st.markdown("---")
-        self._render_returns(info.price, future_avg, info.dividend_yield)
+        self._render_returns(info.price, future_avg, info.dividend_yield, t)
 
         st.markdown("---")
-        self._render_fair_value_comparison(buy_prices, info.price, info.ticker)
+        self._render_fair_value_comparison(buy_prices, info.price, t)
 
-    def _render_inputs(self, info: StockInfo) -> tuple:
+    def _render_inputs(self, info: StockInfo, t: str) -> tuple:
         st.subheader("Datos Fundamentales")
 
         shares_default = (info.shares_outstanding or 0) / 1e6
@@ -44,28 +45,28 @@ class PricesTab(BaseTab):
                 value=shares_default,
                 min_value=0.0,
                 format="%.2f",
-                key="shares",
+                key=f"shares_{t}",
             )
             per = st.number_input(
                 "PER promedio",
                 value=per_default,
                 min_value=0.0,
                 format="%.2f",
-                key="per",
+                key=f"per_{t}",
             )
             ps = st.number_input(
                 "P/S promedio",
                 value=ps_default,
                 min_value=0.0,
                 format="%.2f",
-                key="ps",
+                key=f"ps_{t}",
             )
             pfcf = st.number_input(
                 "P/FCF promedio",
                 value=pfcf_default,
                 min_value=0.0,
                 format="%.2f",
-                key="pfcf",
+                key=f"pfcf_{t}",
             )
 
         with col2:
@@ -74,20 +75,20 @@ class PricesTab(BaseTab):
                 "Beneficios (M)",
                 value=beneficios_default,
                 format="%.2f",
-                key="beneficios",
+                key=f"beneficios_{t}",
             )
             ventas = st.number_input(
                 "Ventas (M)",
                 value=ventas_default,
                 min_value=0.0,
                 format="%.2f",
-                key="ventas",
+                key=f"ventas_{t}",
             )
             fcf = st.number_input(
                 "Flujo de Caja (M)",
                 value=fcf_default,
                 format="%.2f",
-                key="fcf",
+                key=f"fcf_{t}",
             )
 
         return shares, per, ps, pfcf, beneficios, ventas, fcf
@@ -125,6 +126,7 @@ class PricesTab(BaseTab):
         per: float,
         ps: float,
         pfcf: float,
+        t: str = "",
     ) -> float:
         st.subheader("Precios Futuros (Proyección)")
 
@@ -134,7 +136,7 @@ class PricesTab(BaseTab):
                 "Beneficios futuros (M)",
                 value=0.0,
                 format="%.2f",
-                key="ben_futuro",
+                key=f"ben_futuro_{t}",
             )
         with col2:
             ventas_futuro = st.number_input(
@@ -142,14 +144,14 @@ class PricesTab(BaseTab):
                 value=0.0,
                 min_value=0.0,
                 format="%.2f",
-                key="ventas_futuro",
+                key=f"ventas_futuro_{t}",
             )
         with col3:
             fcf_futuro = st.number_input(
                 "Flujo de Caja futuro (M)",
                 value=0.0,
                 format="%.2f",
-                key="fcf_futuro",
+                key=f"fcf_futuro_{t}",
             )
 
         precio_eps = (ben_futuro / shares) * per if shares > 0 and per > 0 else 0
@@ -172,6 +174,7 @@ class PricesTab(BaseTab):
         precio_compra: float,
         precio_futuro: float,
         dividend_yield: float | None,
+        t: str = "",
     ) -> None:
         st.subheader("Rentabilidad Esperada")
 
@@ -182,7 +185,7 @@ class PricesTab(BaseTab):
                 min_value=1,
                 max_value=10,
                 value=5,
-                key="horizonte",
+                key=f"horizonte_{t}",
             )
         with col2:
             div_yield = st.number_input(
@@ -190,7 +193,7 @@ class PricesTab(BaseTab):
                 value=(dividend_yield or 0) * 100,
                 min_value=0.0,
                 format="%.2f",
-                key="div_yield",
+                key=f"div_yield_{t}",
             )
 
         if precio_compra > 0 and precio_futuro > 0:
@@ -208,13 +211,13 @@ class PricesTab(BaseTab):
             st.info("Ingresa datos de precios futuros para calcular la rentabilidad.")
 
     def _render_fair_value_comparison(
-        self, precio_promedio: float, precio_actual: float, ticker: str = ""
+        self, precio_promedio: float, precio_actual: float, t: str = ""
     ) -> None:
         st.subheader("Comparación con Fair Values Externos")
-        if ticker:
+        if t:
             st.link_button(
                 "📊 Ver en InvestingPro",
-                f"https://www.investing.com/pro/{ticker.lower()}",
+                f"https://www.investing.com/pro/{t.lower()}",
                 use_container_width=False,
             )
 
@@ -225,7 +228,7 @@ class PricesTab(BaseTab):
                 value=0.0,
                 min_value=0.0,
                 format="%.2f",
-                key="fv_investing",
+                key=f"fv_investing_{t}",
             )
         with col2:
             fv_guru = st.number_input(
@@ -233,7 +236,7 @@ class PricesTab(BaseTab):
                 value=0.0,
                 min_value=0.0,
                 format="%.2f",
-                key="fv_guru",
+                key=f"fv_guru_{t}",
             )
         with col3:
             fv_alpha = st.number_input(
@@ -241,7 +244,7 @@ class PricesTab(BaseTab):
                 value=0.0,
                 min_value=0.0,
                 format="%.2f",
-                key="fv_alpha",
+                key=f"fv_alpha_{t}",
             )
 
         c1, c2, c3, c4 = st.columns(4)
