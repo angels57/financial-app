@@ -6,34 +6,39 @@ import plotly.graph_objects as go
 def calculate_yoy_growth(values: list[float]) -> list[float]:
     """Calculate year-over-year growth rates for a list of values.
 
-    Returns a list of the same length where the first element is 0.0
-    and subsequent elements are the percentage change from the previous value.
+    Expects values ordered most-recent-first (matching yfinance output).
+    Each element compares to the next (its prior year).
+    Last element is 0.0 (no prior year available).
     """
+    import math
+
     yoy = []
     for i in range(len(values)):
-        if i == 0:
-            yoy.append(0.0)
-        else:
-            if values[i - 1] > 0:
-                growth = ((values[i] - values[i - 1]) / values[i - 1]) * 100
-                yoy.append(growth)
+        if i < len(values) - 1:
+            curr, prev = values[i], values[i + 1]
+            if math.isfinite(curr) and math.isfinite(prev) and prev != 0:
+                yoy.append(((curr - prev) / abs(prev)) * 100)
             else:
                 yoy.append(0.0)
+        else:
+            yoy.append(0.0)
     return yoy
 
 
 def calculate_cagr(values: list[float]) -> float | None:
     """Calculate Compound Annual Growth Rate from a list of values.
 
-    Expects values ordered chronologically (oldest first).
-    Returns the CAGR as a percentage, or None if it cannot be computed.
+    Expects values ordered most-recent-first (matching yfinance output).
+    Filters out NaN/inf values before computing.
     """
-    if len(values) < 2:
+    import math
+
+    clean = [v for v in values if math.isfinite(v) and v > 0]
+    if len(clean) < 2:
         return None
-    start, end = values[0], values[-1]
-    if start <= 0 or end <= 0:
-        return None
-    n = len(values) - 1
+    # Most recent is first, oldest is last
+    end, start = clean[0], clean[-1]
+    n = len(clean) - 1
     return ((end / start) ** (1 / n) - 1) * 100
 
 

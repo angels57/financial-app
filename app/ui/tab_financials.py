@@ -27,6 +27,60 @@ METRIC_COLORS = {
     "Ratios": "#9467bd",
 }
 
+CHART_INSIGHTS = {
+    "revenue_vs_income": (
+        "**Revenue vs Net Income** muestra si los beneficios crecen al ritmo de las ventas. "
+        "Si el Revenue sube pero el Net Income se estanca o baja, los márgenes se están comprimiendo "
+        "— la empresa vende más pero gana menos por cada dólar. Lo ideal es ver ambas barras "
+        "creciendo en paralelo año tras año."
+    ),
+    "sales_growth": (
+        "**Crecimiento de Ventas** mide el ritmo al que la empresa expande sus ingresos. "
+        "Un crecimiento constante y positivo indica demanda sólida. Crecimientos irregulares "
+        "o negativos pueden señalar problemas competitivos o dependencia de ciclos económicos."
+    ),
+    "net_margin": (
+        "**Margen Neto** indica cuánto de cada dólar de ventas queda como ganancia después de "
+        "todos los gastos. Un margen del 20% significa que de cada $100 vendidos, $20 son beneficio. "
+        "Márgenes estables o crecientes reflejan eficiencia operativa y poder de fijación de precios."
+    ),
+    "fcf_vs_income": (
+        "**Net Income vs FCF** revela la calidad de los beneficios. El Net Income puede inflarse "
+        "con ajustes contables, pero el Free Cash Flow muestra el dinero real que entra. "
+        'Si el FCF es consistentemente menor al Net Income, los beneficios pueden ser "de papel". '
+        "Lo ideal es que ambos se muevan juntos."
+    ),
+    "fcf_growth": (
+        "**Free Cash Flow** es el dinero que queda después de cubrir gastos operativos y de capital. "
+        "Es el recurso real para pagar dividendos, recomprar acciones o reinvertir. "
+        "Un FCF positivo y creciente es una de las señales más fuertes de salud financiera."
+    ),
+    "debt": (
+        "**Deuda Total** muestra cuánto debe la empresa. Lo importante no es solo el monto, "
+        "sino la tendencia: deuda creciente sin crecimiento de ingresos es una señal de alarma. "
+        "Compárala siempre con el FCF — si la empresa puede pagar su deuda con 3-4 años de FCF, "
+        "generalmente es manejable."
+    ),
+    "leverage_vs_roe": (
+        "**Deuda/Equity vs ROE** muestra la relación entre apalancamiento y rentabilidad. "
+        "Un ROE alto (>15%) es positivo, pero si viene acompañado de Deuda/Equity alta (>100%), "
+        "la rentabilidad puede ser artificial — generada por deuda, no por eficiencia operativa. "
+        "El escenario ideal es ROE alto con apalancamiento moderado."
+    ),
+    "dividends": (
+        "**Dividendos** reflejan el compromiso de la empresa con sus accionistas. "
+        "Un historial de dividendos crecientes año tras año es señal de confianza de la directiva "
+        "en los flujos futuros. Busca un crecimiento consistente y un payout ratio sostenible "
+        "(idealmente <60% del beneficio neto)."
+    ),
+    "shares": (
+        "**Acciones en Circulación** revelan si la empresa recompra acciones (buybacks) o las diluye. "
+        "Una tendencia bajista es positiva: menos acciones = mayor beneficio por acción para ti. "
+        "Si las acciones suben año tras año, la empresa está diluyendo a los accionistas, "
+        "a menudo para financiar compensaciones o adquisiciones."
+    ),
+}
+
 
 class FinancialsTab(BaseTab):
     """Renderiza el tab de finanzas con métricas y gráficos."""
@@ -50,9 +104,9 @@ class FinancialsTab(BaseTab):
     def _render_kpi_cards(self, metrics: FinancialMetrics) -> None:
         deltas = metrics.yoy_deltas()
 
-        rev_cagr = calculate_cagr(list(reversed(metrics.revenue_billions)))
-        ni_cagr = calculate_cagr(list(reversed(metrics.net_income_billions)))
-        fcf_cagr = calculate_cagr(list(reversed(metrics.fcf_billions)))
+        rev_cagr = calculate_cagr(metrics.revenue_billions)
+        ni_cagr = calculate_cagr(metrics.net_income_billions)
+        fcf_cagr = calculate_cagr(metrics.fcf_billions)
 
         cols = st.columns(4)
 
@@ -92,7 +146,7 @@ class FinancialsTab(BaseTab):
             fig = draw_plotly_multi_line_chart(
                 data, f"{ticker} - Resumen Financiero", "Valor"
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             st.info("No hay suficientes datos para generar el resumen.")
 
@@ -141,7 +195,9 @@ class FinancialsTab(BaseTab):
                     "Net Income": METRIC_COLORS["Net Income"],
                 },
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
+            with st.expander("¿Cómo leer este gráfico?"):
+                st.markdown(CHART_INSIGHTS["revenue_vs_income"])
 
         col1, col2 = st.columns(2)
         with col1:
@@ -155,7 +211,9 @@ class FinancialsTab(BaseTab):
                     signed=True,
                     color=METRIC_COLORS["Ratios"],
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
+                with st.expander("¿Cómo leer este gráfico?"):
+                    st.markdown(CHART_INSIGHTS["sales_growth"])
         with col2:
             if metrics.net_margin:
                 fig = draw_plotly_bar_chart(
@@ -167,7 +225,9 @@ class FinancialsTab(BaseTab):
                     signed=True,
                     color=METRIC_COLORS["Net Income"],
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
+                with st.expander("¿Cómo leer este gráfico?"):
+                    st.markdown(CHART_INSIGHTS["net_margin"])
 
     # -- Tab 2: Cash Flow -----------------------------------------------------
 
@@ -186,12 +246,9 @@ class FinancialsTab(BaseTab):
                     "Free Cash Flow": METRIC_COLORS["FCF"],
                 },
             )
-            st.plotly_chart(fig, use_container_width=True)
-
-            st.caption(
-                "Si el FCF acompaña al Net Income, los beneficios son reales. "
-                "Si divergen, pueden ser ajustes contables."
-            )
+            st.plotly_chart(fig, width="stretch")
+            with st.expander("¿Cómo leer este gráfico?"):
+                st.markdown(CHART_INSIGHTS["fcf_vs_income"])
 
         if metrics.fcf_billions:
             fcf_yoy = calculate_yoy_growth(metrics.fcf_billions)
@@ -205,7 +262,9 @@ class FinancialsTab(BaseTab):
                 bar_color=METRIC_COLORS["FCF"],
                 line_color=METRIC_COLORS["Debt"],
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
+            with st.expander("¿Cómo leer este gráfico?"):
+                st.markdown(CHART_INSIGHTS["fcf_growth"])
         elif not metrics.net_income_billions:
             st.info("Datos de Cash Flow no disponibles.")
 
@@ -227,7 +286,9 @@ class FinancialsTab(BaseTab):
                     bar_color=METRIC_COLORS["Debt"],
                     line_color=METRIC_COLORS["Revenue"],
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
+                with st.expander("¿Cómo leer este gráfico?"):
+                    st.markdown(CHART_INSIGHTS["debt"])
             else:
                 st.info("Datos de deuda no disponibles.")
 
@@ -245,7 +306,9 @@ class FinancialsTab(BaseTab):
                     ylabel="Porcentaje (%)",
                     is_percent=True,
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
+                with st.expander("¿Cómo leer este gráfico?"):
+                    st.markdown(CHART_INSIGHTS["leverage_vs_roe"])
             elif metrics.roe:
                 fig = draw_plotly_bar_chart(
                     metrics.roe,
@@ -256,7 +319,7 @@ class FinancialsTab(BaseTab):
                     signed=True,
                     color=METRIC_COLORS["Ratios"],
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width="stretch")
 
     # -- Tab 4: Retorno al Accionista -----------------------------------------
 
@@ -290,7 +353,9 @@ class FinancialsTab(BaseTab):
             bar_color="#2ca02c",
             line_color="#ff7f0e",
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
+        with st.expander("¿Cómo leer este gráfico?"):
+            st.markdown(CHART_INSIGHTS["dividends"])
 
         c1, c2 = st.columns(2)
         with c1:
@@ -327,7 +392,9 @@ class FinancialsTab(BaseTab):
             bar_color="#9467bd",
             line_color="#1f77b4",
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
+        with st.expander("¿Cómo leer este gráfico?"):
+            st.markdown(CHART_INSIGHTS["shares"])
 
     # -- Tabla de datos -------------------------------------------------------
 
@@ -453,7 +520,7 @@ class FinancialsTab(BaseTab):
             height=38 + (len(rows) * 32) + 10,
         )
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     @staticmethod
     def _calc_margin_row(

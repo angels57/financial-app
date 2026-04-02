@@ -16,14 +16,20 @@ class FinancialCalculator:
 
     @staticmethod
     def _calc_growth(series: pd.Series) -> list[float]:
+        """Calculate YoY growth. Series is ordered most-recent-first."""
+        import math
+
+        values = series.values
         growth = []
-        prev = None
-        for value in series.values:
-            if prev:
-                growth.append(((value - prev) / prev) * 100)
+        for i in range(len(values)):
+            if i < len(values) - 1:
+                curr, prev = float(values[i]), float(values[i + 1])
+                if math.isfinite(curr) and math.isfinite(prev) and prev != 0:
+                    growth.append(((curr - prev) / abs(prev)) * 100)
+                else:
+                    growth.append(0)
             else:
                 growth.append(0)
-            prev = value
         return growth
 
     @staticmethod

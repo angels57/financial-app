@@ -26,22 +26,25 @@ class TestCalcGrowth:
     """Tests for _calc_growth method."""
 
     def test_calculates_percentage_growth(self):
-        series = pd.Series([100, 110, 121, 133.1])
+        # Most recent first: 133.1, 121, 110, 100 (each ~10% growth over prior year)
+        series = pd.Series([133.1, 121, 110, 100])
         result = FinancialCalculator._calc_growth(series)
-        assert result[0] == 0
-        assert result[1] == 10.0
-        assert result[2] == 10.0
-        assert abs(result[3] - 10.0) < 0.001
+        assert abs(result[0] - 10.0) < 0.001
+        assert abs(result[1] - 10.0) < 0.001
+        assert abs(result[2] - 10.0) < 0.001
+        assert result[3] == 0
 
-    def test_first_value_is_zero(self):
-        series = pd.Series([100, 110, 120])
+    def test_last_value_is_zero(self):
+        # Most recent first — last element has no prior year to compare
+        series = pd.Series([120, 110, 100])
         result = FinancialCalculator._calc_growth(series)
-        assert result[0] == 0
+        assert result[-1] == 0
 
     def test_handles_negative_growth(self):
-        series = pd.Series([100, 90, 81])
+        # Most recent first: 81, 90, 100 (each -10% decline)
+        series = pd.Series([81, 90, 100])
         result = FinancialCalculator._calc_growth(series)
-        assert result == [0, -10.0, -10.0]
+        assert result == [-10.0, -10.0, 0]
 
     def test_handles_single_value(self):
         series = pd.Series([100])
@@ -191,8 +194,11 @@ class TestCompute:
         )
 
         assert len(metrics.sales_growth) == 5
-        assert metrics.sales_growth[0] == 0
-        assert metrics.sales_growth[1] == pytest.approx(-10.0, rel=0.01)
+        # Most recent first: 500B grew ~11.1% over 450B
+        assert metrics.sales_growth[0] == pytest.approx(11.11, rel=0.01)
+        assert metrics.sales_growth[1] == pytest.approx(12.5, rel=0.01)
+        # Last element (oldest) has no prior year — growth is 0
+        assert metrics.sales_growth[-1] == 0
 
     def test_years_limit_applied(
         self, sample_financials_data, sample_balance_data, sample_cashflow_data
