@@ -99,3 +99,5 @@ class NewsItem(BaseModel):
     title: str
     link: str
     publisher: str = "Fuente desconocida"
+    thumbnail: str = ""
+    published_at: str = ""

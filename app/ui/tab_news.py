@@ -25,6 +25,15 @@ class NewsTab(BaseTab):
 
         for item in news:
             with st.container():
-                st.write(f"**{item.title}**")
-                st.caption(f"Fuente: {item.publisher} | [Leer más]({item.link})")
+                col_img, col_text = st.columns([1, 3])
+                with col_img:
+                    if item.thumbnail:
+                        st.image(item.thumbnail, use_container_width=True)
+                with col_text:
+                    st.markdown(f"**[{item.title}]({item.link})**")
+                    caption_parts = [f"Fuente: {item.publisher}"]
+                    if item.published_at:
+                        date_str = item.published_at[:10]
+                        caption_parts.append(date_str)
+                    st.caption(" | ".join(caption_parts))
                 st.markdown("---")

@@ -49,14 +49,26 @@ class SummaryTab(BaseTab):
             )
 
     def _render_market_metrics(self, info: StockInfo) -> None:
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4, c5, c6 = st.columns(6)
         c1.metric("Market Cap", format_large_number(info.market_cap, info.currency))
         c2.metric("P/E Ratio", f"{info.pe_ratio:.2f}" if info.pe_ratio else "N/A")
         c3.metric("Volumen", f"{info.volume:,.0f}")
         with c4:
             st.link_button(
-                "📈 Ver en TradingView",
+                "📈 TradingView",
                 f"https://www.tradingview.com/symbols/{info.ticker}/",
+                use_container_width=True,
+            )
+        with c5:
+            st.link_button(
+                "🧠 AlphaSpread",
+                f"https://www.alphaspread.com/security/nasdaq/{info.ticker.lower()}/summary",
+                use_container_width=True,
+            )
+        with c6:
+            st.link_button(
+                "💡 Smart Investor",
+                "https://thesmartinvestortool.com",
                 use_container_width=True,
             )
 

@@ -69,16 +69,38 @@ class StockService:
             raw_news = self._stock.news or []
             items = []
             for item in raw_news[:5]:
-                title = item.get("title")
-                link = item.get("link")
-                if title and link:
-                    items.append(
-                        NewsItem(
-                            title=title,
-                            link=link,
-                            publisher=item.get("publisher", "Fuente desconocida"),
-                        )
+                content = item.get("content", item)
+                title = content.get("title")
+                click_url = content.get("clickThroughUrl") or {}
+                link = click_url.get("url") if isinstance(click_url, dict) else None
+                if not link:
+                    canonical = content.get("canonicalUrl") or {}
+                    link = canonical.get("url") if isinstance(canonical, dict) else None
+                if not title or not link:
+                    continue
+                provider = content.get("provider") or {}
+                publisher = (
+                    provider.get("displayName", "Fuente desconocida")
+                    if isinstance(provider, dict)
+                    else "Fuente desconocida"
+                )
+                thumbnail_data = content.get("thumbnail") or {}
+                thumbnail = ""
+                if isinstance(thumbnail_data, dict):
+                    resolutions = thumbnail_data.get("resolutions") or []
+                    if resolutions:
+                        thumbnail = resolutions[0].get("url", "")
+                    else:
+                        thumbnail = thumbnail_data.get("originalUrl", "")
+                items.append(
+                    NewsItem(
+                        title=title,
+                        link=link,
+                        publisher=publisher,
+                        thumbnail=thumbnail,
+                        published_at=content.get("pubDate", ""),
                     )
+                )
             return items
         except Exception:
             return []
