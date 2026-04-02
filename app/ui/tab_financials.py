@@ -1,12 +1,18 @@
 """Tab de análisis financiero."""
 
+import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 from models import FinancialMetrics
 from services import StockService
 from ui.base_tab import BaseTab
 from ui.components import render_diff_badge
-from utils import draw_plotly_bar_chart, draw_plotly_multi_line_chart
+from utils import (
+    draw_plotly_bar_chart,
+    draw_plotly_multi_line_chart,
+    format_large_number,
+)
 
 
 METRIC_COLORS = {
@@ -176,9 +182,86 @@ class FinancialsTab(BaseTab):
                     st.plotly_chart(fig, use_container_width=True)
 
     def _render_data_table(self, stock_service: StockService) -> None:
-        with st.expander("Ver Datos del Estado de Resultados", expanded=False):
-            df = stock_service.get_financials()
-            if df is not None and not df.empty:
-                st.dataframe(df.T, width="stretch")
+        st.subheader("Estado de Resultados")
+        df = stock_service.get_financials()
+        if df is None or df.empty:
+            st.info("Datos del estado de resultados no disponibles.")
+            return
+
+        row_label_map = {
+            "Total Revenue": "Ingresos Totales",
+            "Net Income": "Beneficio Neto",
+            "Operating Income": "Resultado Operativo",
+            "Gross Profit": "Beneficio Bruto",
+            "Interest Expense": "Gastos Financieros",
+            "Net Income Available To Common": "Beneficio Neto (Common)",
+            "Basic EPS": "EPS Básico",
+            "Diluted EPS": "EPS Diluido",
+            "Shares Outstanding": "Acciones en Circulación",
+            "Dividend per Share": "Dividendo por Acción",
+            "Interest Income": "Ingresos por Intereses",
+            "Income Tax Expense": "Impuesto sobre Beneficios",
+            "Research And Development": "I+D",
+            "Selling General And Administration": "SG&A",
+            "Cost Of Revenue": "Coste de Ingresos",
+            "Other Income Net": "Otros Ingresos Netos",
+        }
+
+        display_df = df.copy()
+        display_df.index = display_df.index.map(lambda x: row_label_map.get(x, x))
+        display_df.columns = [str(c)[:4] for c in display_df.columns]
+
+        header_values = ["Concepto"] + [str(c) for c in display_df.columns]
+        cell_values = []
+        cell_colors = []
+
+        for row_idx, row_label in enumerate(display_df.index):
+            row_values = [row_label]
+            if row_idx % 2 == 0:
+                base_color = "#f8f9fa"
             else:
-                st.info("Datos del estado de resultados no disponibles.")
+                base_color = "#ffffff"
+            row_colors = [base_color]
+            for col in display_df.columns:
+                val = display_df.loc[row_label, col]
+                if pd.notna(val):
+                    row_values.append(format_large_number(val))
+                    if val < 0:
+                        row_colors.append("#ffcccc")
+                    else:
+                        row_colors.append(base_color)
+                else:
+                    row_values.append("N/A")
+                    row_colors.append(base_color)
+            cell_values.append(row_values)
+            cell_colors.append(row_colors)
+
+        fig = go.Figure(
+            data=[
+                go.Table(
+                    header=dict(
+                        values=header_values,
+                        fill_color="#2c3e50",
+                        font_color="#ffffff",
+                        align="left",
+                        height=38,
+                        font=dict(size=12, color="white"),
+                    ),
+                    cells=dict(
+                        values=list(zip(*cell_values)),
+                        fill_color=cell_colors,
+                        align="left",
+                        height=32,
+                        font=dict(size=11, color="#2c3e50"),
+                        line=dict(color="#dee2e6", width=1),
+                    ),
+                )
+            ]
+        )
+
+        fig.update_layout(
+            margin=dict(l=0, r=0, t=5, b=0),
+            height=38 + (len(display_df.index) * 32),
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
