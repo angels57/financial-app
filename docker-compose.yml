@@ -12,7 +12,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U finapp"]
+      test: ["CMD-SHELL", "pg_isready -U finapp -d financial_stre"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -23,6 +23,7 @@ services:
       - "8501:8501"
     volumes:
       - .:/app
+      - /app/.venv
     depends_on:
       db:
         condition: service_healthy

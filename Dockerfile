@@ -30,6 +30,9 @@ COPY --from=builder /app /app
 # Place the virtual environment binaries on the PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
+# Install Playwright system dependencies and browsers
+RUN playwright install --with-deps chromium
+
 # Expose the port Streamlit will run on
 EXPOSE 8501
 

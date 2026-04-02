@@ -3,6 +3,7 @@
 import json
 import logging
 from datetime import datetime, timezone
+from io import StringIO
 
 import pandas as pd
 from psycopg_pool import ConnectionPool
@@ -98,7 +99,7 @@ class CacheRepository:
         age = (datetime.now(timezone.utc) - fetched_at).total_seconds()
         if age > max_age_seconds:
             return None
-        return pd.read_json(json.dumps(row[0]))
+        return pd.read_json(StringIO(json.dumps(row[0])))
 
     def upsert_price_history(
         self, ticker: str, period: str, df: pd.DataFrame, source: str
@@ -131,7 +132,7 @@ class CacheRepository:
             ).fetchone()
         if row is None:
             return None
-        return pd.read_json(json.dumps(row[0]))
+        return pd.read_json(StringIO(json.dumps(row[0])))
 
     def upsert_financial_statement(
         self, ticker: str, statement: str, df: pd.DataFrame, source: str
