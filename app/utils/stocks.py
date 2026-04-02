@@ -22,6 +22,70 @@ def calculate_yoy_growth(values: list[float]) -> list[float]:
     return yoy
 
 
+def calculate_cagr(values: list[float]) -> float | None:
+    """Calculate Compound Annual Growth Rate from a list of values.
+
+    Expects values ordered chronologically (oldest first).
+    Returns the CAGR as a percentage, or None if it cannot be computed.
+    """
+    if len(values) < 2:
+        return None
+    start, end = values[0], values[-1]
+    if start <= 0 or end <= 0:
+        return None
+    n = len(values) - 1
+    return ((end / start) ** (1 / n) - 1) * 100
+
+
+def draw_plotly_grouped_bar_chart(
+    series: dict[str, list[float]],
+    labels: list[str],
+    title: str,
+    ylabel: str,
+    colors: dict[str, str] | None = None,
+) -> go.Figure:
+    """Draw a grouped bar chart with multiple series."""
+    import math
+
+    fig = go.Figure()
+    default_colors = ["#1f77b4", "#2ca02c", "#ff7f0e", "#d62728", "#9467bd"]
+
+    for i, (name, values) in enumerate(series.items()):
+        color = (colors or {}).get(name, default_colors[i % len(default_colors)])
+        fig.add_trace(
+            go.Bar(
+                x=labels,
+                y=values,
+                name=name,
+                marker_color=color,
+                text=[f"${v:.2f}B" if math.isfinite(v) else "" for v in values],
+                textposition="outside",
+            )
+        )
+
+    fig.update_layout(
+        title={"text": title, "font": {"size": 14}, "y": 0.95},
+        xaxis_title="Año",
+        yaxis_title=ylabel,
+        barmode="group",
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        hovermode="x unified",
+        height=400,
+        margin={"l": 0, "r": 0, "t": 80, "b": 0},
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "x": 0.5,
+            "xanchor": "center",
+        },
+    )
+    fig.update_yaxes(gridcolor="rgba(0,0,0,0.1)")
+
+    return fig
+
+
 def calculate_52_week_delta(
     current_price: float, reference_price: Optional[float]
 ) -> Optional[float]:
@@ -94,15 +158,21 @@ def draw_plotly_multi_line_chart(
         )
 
     fig.update_layout(
-        title={"text": title, "font": {"size": 14}},
+        title={"text": title, "font": {"size": 14}, "y": 0.95},
         xaxis_title="Year",
         yaxis_title=ylabel,
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         hovermode="x unified",
         height=400,
-        margin={"l": 0, "r": 0, "t": 40, "b": 0},
-        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02},
+        margin={"l": 0, "r": 0, "t": 80, "b": 0},
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "x": 0.5,
+            "xanchor": "center",
+        },
     )
 
     if is_percent:
@@ -153,7 +223,7 @@ def draw_plotly_dual_axis_chart(
     )
 
     fig.update_layout(
-        title={"text": title, "font": {"size": 14}},
+        title={"text": title, "font": {"size": 14}, "y": 0.95},
         xaxis=dict(
             title="Año",
             gridcolor="rgba(0,0,0,0.1)",
@@ -175,8 +245,14 @@ def draw_plotly_dual_axis_chart(
         paper_bgcolor="rgba(0,0,0,0)",
         hovermode="x unified",
         height=400,
-        margin={"l": 50, "r": 50, "t": 40, "b": 0},
-        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02},
+        margin={"l": 50, "r": 50, "t": 80, "b": 0},
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "x": 0.5,
+            "xanchor": "center",
+        },
         showlegend=True,
     )
 

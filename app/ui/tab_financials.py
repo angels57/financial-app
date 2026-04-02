@@ -9,9 +9,11 @@ from services import StockService
 from ui.base_tab import BaseTab
 from ui.components import render_diff_badge
 from utils import (
+    calculate_cagr,
     calculate_yoy_growth,
     draw_plotly_bar_chart,
     draw_plotly_dual_axis_chart,
+    draw_plotly_grouped_bar_chart,
     draw_plotly_multi_line_chart,
     format_large_number,
 )
@@ -47,16 +49,21 @@ class FinancialsTab(BaseTab):
 
     def _render_kpi_cards(self, metrics: FinancialMetrics) -> None:
         deltas = metrics.yoy_deltas()
+
+        rev_cagr = calculate_cagr(list(reversed(metrics.revenue_billions)))
+        ni_cagr = calculate_cagr(list(reversed(metrics.net_income_billions)))
+        fcf_cagr = calculate_cagr(list(reversed(metrics.fcf_billions)))
+
         cols = st.columns(4)
 
         kpi_config = [
-            ("Revenue", "${val:.2f}B", "var. YoY", False),
-            ("Net Margin", "{val:.1f}%", "var. YoY", False),
-            ("FCF", "${val:.2f}B", "var. YoY", False),
-            ("Debt/Equity", "{val:.1f}%", "var. YoY", True),
+            ("Revenue", "${val:.2f}B", False, rev_cagr),
+            ("Net Margin", "{val:.1f}%", False, None),
+            ("FCF", "${val:.2f}B", False, fcf_cagr),
+            ("Debt/Equity", "{val:.1f}%", True, None),
         ]
 
-        for col, (key, val_fmt, delta_label, is_inverse) in zip(cols, kpi_config):
+        for col, (key, val_fmt, is_inverse, cagr) in zip(cols, kpi_config):
             with col:
                 with st.container(border=True):
                     if key in deltas:
@@ -66,13 +73,16 @@ class FinancialsTab(BaseTab):
                             val_fmt.format(val=val) if val is not None else "N/A",
                         )
                         if delta is not None and val is not None:
-                            if is_inverse:
-                                badge_delta = -delta
-                            else:
-                                badge_delta = delta
-                            render_diff_badge(badge_delta, label=delta_label)
+                            badge_delta = -delta if is_inverse else delta
+                            render_diff_badge(badge_delta, label="var. YoY")
+                        if cagr is not None:
+                            render_diff_badge(cagr, label=f"CAGR {len(metrics.years)}a")
                     else:
                         st.metric(key, "N/A")
+
+        if ni_cagr is not None:
+            with cols[1]:
+                render_diff_badge(ni_cagr, label=f"NI CAGR {len(metrics.years)}a")
 
     def _render_summary_chart(self, ticker: str, metrics: FinancialMetrics) -> None:
         st.subheader("Resumen Financiero (5 Años)")
@@ -94,79 +104,117 @@ class FinancialsTab(BaseTab):
             return
 
         tabs = st.tabs(
-            ["Ingresos", "Rentabilidad", "Cash Flow", "Deuda", "Dividendos", "Acciones"]
+            [
+                "Crecimiento",
+                "Cash Flow",
+                "Salud Financiera",
+                "Retorno al Accionista",
+            ]
         )
 
         with tabs[0]:
-            col1, col2 = st.columns(2)
-            with col1:
-                if metrics.revenue_billions:
-                    fig = draw_plotly_bar_chart(
-                        metrics.revenue_billions,
-                        metrics.years,
-                        "Revenue",
-                        "Billones ($)",
-                        color=METRIC_COLORS["Revenue"],
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-            with col2:
-                if metrics.sales_growth:
-                    fig = draw_plotly_bar_chart(
-                        metrics.sales_growth,
-                        metrics.years,
-                        "Sales Growth",
-                        "Crecimiento (%)",
-                        is_percent=True,
-                        signed=True,
-                        color=METRIC_COLORS["Ratios"],
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+            self._render_growth_tab(metrics)
 
         with tabs[1]:
-            col1, col2 = st.columns(2)
-            with col1:
-                if metrics.net_margin:
-                    fig = draw_plotly_bar_chart(
-                        metrics.net_margin,
-                        metrics.years,
-                        "Net Margin",
-                        "Margen (%)",
-                        is_percent=True,
-                        signed=True,
-                        color=METRIC_COLORS["Ratios"],
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-            with col2:
-                if metrics.roe:
-                    fig = draw_plotly_bar_chart(
-                        metrics.roe,
-                        metrics.years,
-                        "ROE",
-                        "ROE (%)",
-                        is_percent=True,
-                        signed=True,
-                        color=METRIC_COLORS["Ratios"],
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+            self._render_cashflow_tab(metrics)
 
         with tabs[2]:
-            if metrics.fcf_billions:
-                fcf_yoy = calculate_yoy_growth(metrics.fcf_billions)
-                fig = draw_plotly_dual_axis_chart(
-                    bar_values=metrics.fcf_billions,
-                    line_values=fcf_yoy,
-                    labels=metrics.years,
-                    title="Free Cash Flow",
-                    bar_label="FCF (Billones $)",
-                    line_label="Cambio YoY (%)",
-                    bar_color="#2ca02c",
-                    line_color="#d62728",
-                )
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.info("Datos de Free Cash Flow no disponibles.")
+            self._render_health_tab(metrics)
 
         with tabs[3]:
+            self._render_shareholder_tab(stock_service)
+
+    # -- Tab 1: Crecimiento --------------------------------------------------
+
+    def _render_growth_tab(self, metrics: FinancialMetrics) -> None:
+        if metrics.revenue_billions and metrics.net_income_billions:
+            fig = draw_plotly_grouped_bar_chart(
+                series={
+                    "Revenue": metrics.revenue_billions,
+                    "Net Income": metrics.net_income_billions,
+                },
+                labels=metrics.years,
+                title="Revenue vs Net Income",
+                ylabel="Billones ($)",
+                colors={
+                    "Revenue": METRIC_COLORS["Revenue"],
+                    "Net Income": METRIC_COLORS["Net Income"],
+                },
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if metrics.sales_growth:
+                fig = draw_plotly_bar_chart(
+                    metrics.sales_growth,
+                    metrics.years,
+                    "Crecimiento Ventas YoY",
+                    "Crecimiento (%)",
+                    is_percent=True,
+                    signed=True,
+                    color=METRIC_COLORS["Ratios"],
+                )
+                st.plotly_chart(fig, use_container_width=True)
+        with col2:
+            if metrics.net_margin:
+                fig = draw_plotly_bar_chart(
+                    metrics.net_margin,
+                    metrics.years,
+                    "Margen Neto",
+                    "Margen (%)",
+                    is_percent=True,
+                    signed=True,
+                    color=METRIC_COLORS["Net Income"],
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+    # -- Tab 2: Cash Flow -----------------------------------------------------
+
+    def _render_cashflow_tab(self, metrics: FinancialMetrics) -> None:
+        if metrics.fcf_billions and metrics.net_income_billions:
+            fig = draw_plotly_grouped_bar_chart(
+                series={
+                    "Net Income": metrics.net_income_billions,
+                    "Free Cash Flow": metrics.fcf_billions,
+                },
+                labels=metrics.years,
+                title="Net Income vs FCF — Calidad de los Beneficios",
+                ylabel="Billones ($)",
+                colors={
+                    "Net Income": METRIC_COLORS["Net Income"],
+                    "Free Cash Flow": METRIC_COLORS["FCF"],
+                },
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.caption(
+                "Si el FCF acompaña al Net Income, los beneficios son reales. "
+                "Si divergen, pueden ser ajustes contables."
+            )
+
+        if metrics.fcf_billions:
+            fcf_yoy = calculate_yoy_growth(metrics.fcf_billions)
+            fig = draw_plotly_dual_axis_chart(
+                bar_values=metrics.fcf_billions,
+                line_values=fcf_yoy,
+                labels=metrics.years,
+                title="Free Cash Flow + Crecimiento YoY",
+                bar_label="FCF (Billones $)",
+                line_label="Cambio YoY (%)",
+                bar_color=METRIC_COLORS["FCF"],
+                line_color=METRIC_COLORS["Debt"],
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        elif not metrics.net_income_billions:
+            st.info("Datos de Cash Flow no disponibles.")
+
+    # -- Tab 3: Salud Financiera ----------------------------------------------
+
+    def _render_health_tab(self, metrics: FinancialMetrics) -> None:
+        col1, col2 = st.columns(2)
+
+        with col1:
             if metrics.debt_billions:
                 debt_yoy = calculate_yoy_growth(metrics.debt_billions)
                 fig = draw_plotly_dual_axis_chart(
@@ -176,17 +224,47 @@ class FinancialsTab(BaseTab):
                     title="Deuda Total",
                     bar_label="Deuda (Billones $)",
                     line_label="Cambio YoY (%)",
-                    bar_color="#d62728",
-                    line_color="#1f77b4",
+                    bar_color=METRIC_COLORS["Debt"],
+                    line_color=METRIC_COLORS["Revenue"],
                 )
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("Datos de deuda no disponibles.")
 
-        with tabs[4]:
-            self._render_dividends_chart(stock_service)
+        with col2:
+            if metrics.debt_equity and metrics.roe:
+                fig = draw_plotly_multi_line_chart(
+                    {
+                        "Deuda/Equity (%)": {
+                            "x": metrics.years,
+                            "y": metrics.debt_equity,
+                        },
+                        "ROE (%)": {"x": metrics.years, "y": metrics.roe},
+                    },
+                    title="Apalancamiento vs Rentabilidad",
+                    ylabel="Porcentaje (%)",
+                    is_percent=True,
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            elif metrics.roe:
+                fig = draw_plotly_bar_chart(
+                    metrics.roe,
+                    metrics.years,
+                    "ROE",
+                    "ROE (%)",
+                    is_percent=True,
+                    signed=True,
+                    color=METRIC_COLORS["Ratios"],
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
-        with tabs[5]:
+    # -- Tab 4: Retorno al Accionista -----------------------------------------
+
+    def _render_shareholder_tab(self, stock_service: StockService) -> None:
+        col1, col2 = st.columns(2)
+        with col1:
+            self._render_dividends_chart(stock_service)
+        with col2:
             self._render_shares_chart(stock_service)
 
     def _render_dividends_chart(self, stock_service: StockService) -> None:
@@ -214,14 +292,14 @@ class FinancialsTab(BaseTab):
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        col1, col2 = st.columns(2)
-        with col1:
+        c1, c2 = st.columns(2)
+        with c1:
             if info.dividend_yield is not None:
                 st.metric(
                     "Dividend Yield (TTM)",
                     f"{info.dividend_yield * 100:.2f}%",
                 )
-        with col2:
+        with c2:
             if dividends:
                 st.metric(
                     "Último Dividendo Anual",
@@ -250,6 +328,8 @@ class FinancialsTab(BaseTab):
             line_color="#1f77b4",
         )
         st.plotly_chart(fig, use_container_width=True)
+
+    # -- Tabla de datos -------------------------------------------------------
 
     def _render_data_table(self, stock_service: StockService) -> None:
         st.subheader("Estado de Resultados")
