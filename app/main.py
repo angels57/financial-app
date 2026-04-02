@@ -3,7 +3,14 @@ import streamlit as st
 from config import settings
 from core import get_app_logger, init_monitoring
 from services import FinancialCalculator, StockService
-from ui import FinancialsTab, NewsTab, SummaryTab, TechnicalTab, render_sidebar
+from ui import (
+    FinancialsTab,
+    NewsTab,
+    PricesTab,
+    SummaryTab,
+    TechnicalTab,
+    render_sidebar,
+)
 
 logger = get_app_logger("")
 
@@ -45,6 +52,7 @@ def main():
             tabs = [
                 SummaryTab(title="📊 Resumen"),
                 FinancialsTab(title="📈 Finanzas"),
+                PricesTab(title="💰 Precios"),
                 TechnicalTab(title="🔬 Análisis Técnico"),
                 NewsTab(title="📰 Noticias", logger=logger),
             ]

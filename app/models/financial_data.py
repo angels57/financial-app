@@ -26,6 +26,13 @@ class StockInfo(BaseModel):
     eps: float | None = None
     target_price: float | None = None
     recommendation: str = ""
+    shares_outstanding: float | None = None
+    forward_pe: float | None = None
+    price_to_sales: float | None = None
+    price_to_fcf: float | None = None
+    total_revenue: float | None = None
+    free_cash_flow: float | None = None
+    net_income: float | None = None
 
 
 class ChartSeries(BaseModel):

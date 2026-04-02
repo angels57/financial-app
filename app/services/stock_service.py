@@ -20,6 +20,11 @@ class StockService:
     def get_info(self) -> StockInfo:
         info = self._stock.fast_info
         full_info = self._stock.info
+        fcf = full_info.get("freeCashflow")
+        shares = full_info.get("sharesOutstanding")
+        price_to_fcf = None
+        if fcf and shares and fcf > 0:
+            price_to_fcf = (info.last_price * shares) / fcf
         return StockInfo(
             ticker=self._ticker_symbol,
             short_name=full_info.get("shortName", self._ticker_symbol),
@@ -41,6 +46,13 @@ class StockService:
             eps=full_info.get("trailingEps"),
             target_price=full_info.get("targetMeanPrice"),
             recommendation=full_info.get("recommendationKey", ""),
+            shares_outstanding=full_info.get("sharesOutstanding"),
+            forward_pe=full_info.get("forwardPE"),
+            price_to_sales=full_info.get("priceToSalesTrailing12Months"),
+            price_to_fcf=price_to_fcf,
+            total_revenue=full_info.get("totalRevenue"),
+            free_cash_flow=full_info.get("freeCashflow"),
+            net_income=full_info.get("netIncomeToCommon"),
         )
 
     def get_history(self, period: str) -> pd.DataFrame:
