@@ -11,15 +11,29 @@ class PricesTab(BaseTab):
 
     def render(self, *, info: StockInfo, **kwargs) -> None:
         t = info.ticker
-        ps, pfcf, ventas, fcf, per_default, beneficios_default = self._render_inputs(
-            info, t
-        )
+        (
+            per_default,
+            ps_default,
+            pfcf_default,
+            beneficios_default,
+            ventas_default,
+            fcf_default,
+        ) = self._render_inputs(info, t)
         buy_prices = self._render_buy_prices(
-            ps, pfcf, ventas, fcf, per_default, beneficios_default, info, t
+            per_default,
+            ps_default,
+            pfcf_default,
+            beneficios_default,
+            ventas_default,
+            fcf_default,
+            info,
+            t,
         )
 
         st.markdown("---")
-        future_avg = self._render_future_prices(per_default, ps, pfcf, info, t)
+        future_avg = self._render_future_prices(
+            per_default, ps_default, pfcf_default, info, t
+        )
 
         st.markdown("---")
         self._render_returns(info.price, future_avg, info.dividend_yield, t)
@@ -28,61 +42,30 @@ class PricesTab(BaseTab):
         self._render_fair_value_comparison(buy_prices, info.price, t)
 
     def _render_inputs(self, info: StockInfo, t: str) -> tuple:
-        st.subheader("Datos Fundamentales")
-
+        per_default = float(info.pe_ratio or 0)
         ps_default = float(info.price_to_sales or 0)
         pfcf_default = float(info.price_to_fcf or 0)
+        beneficios_default = float((info.net_income or 0) / 1e6)
         ventas_default = float((info.total_revenue or 0) / 1e6)
         fcf_default = float((info.free_cash_flow or 0) / 1e6)
 
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.markdown("**Ratios Promedio**")
-            ps = st.number_input(
-                "P/S promedio",
-                value=ps_default,
-                min_value=0.0,
-                format="%.2f",
-                key=f"ps_{t}",
-            )
-            pfcf = st.number_input(
-                "P/FCF promedio",
-                value=pfcf_default,
-                min_value=0.0,
-                format="%.2f",
-                key=f"pfcf_{t}",
-            )
-
-        with col2:
-            st.markdown("**Datos Actuales (M)**")
-            ventas = st.number_input(
-                "Ventas (M)",
-                value=ventas_default,
-                min_value=0.0,
-                format="%.2f",
-                key=f"ventas_{t}",
-            )
-            fcf = st.number_input(
-                "Flujo de Caja (M)",
-                value=fcf_default,
-                format="%.2f",
-                key=f"fcf_{t}",
-            )
-
-        per_default = float(info.pe_ratio or 0)
-        beneficios_default = float((info.net_income or 0) / 1e6)
-
-        return ps, pfcf, ventas, fcf, per_default, beneficios_default
+        return (
+            per_default,
+            ps_default,
+            pfcf_default,
+            beneficios_default,
+            ventas_default,
+            fcf_default,
+        )
 
     def _render_buy_prices(
         self,
-        ps: float,
-        pfcf: float,
-        ventas: float,
-        fcf: float,
         per_default: float,
+        ps_default: float,
+        pfcf_default: float,
         beneficios_default: float,
+        ventas_default: float,
+        fcf_default: float,
         info: StockInfo,
         t: str,
     ) -> float:
@@ -97,94 +80,121 @@ class PricesTab(BaseTab):
             key=f"shares_{t}",
         )
 
-        col1, col2, col3 = st.columns([2, 1, 1])
-
-        per_input = col2.empty()
-        ben_input = col2.empty()
+        col1, col2, col3, col4 = st.columns(4)
 
         with col1:
-            metric_per = st.empty()
-            metric_ps = st.empty()
-            metric_fcf = st.empty()
-            st.markdown("---")
-            metric_promedio = st.empty()
+            with st.container(border=True):
+                st.markdown("**SEGÚN PER**")
+                per = st.number_input(
+                    "PER promedio",
+                    value=per_default,
+                    min_value=0.0,
+                    format="%.2f",
+                    key=f"per_{t}",
+                )
+                beneficios = st.number_input(
+                    "Beneficios (M)",
+                    value=beneficios_default,
+                    format="%.2f",
+                    key=f"beneficios_{t}",
+                )
+                precio_per = (
+                    (beneficios / shares) * per if shares > 0 and per > 0 else 0
+                )
+                st.metric("Precio", f"${precio_per:,.1f}" if precio_per else "N/A")
+                st.markdown("---")
+                st.latex(
+                    r"\frac{\text{Beneficios}}{\text{Acciones}} \times \text{PER promedio}"
+                )
+                st.caption(
+                    f"({beneficios:.2f}M / {shares:.2f}M) × {per:.2f} = ${precio_per:,.2f}"
+                )
 
         with col2:
-            per = per_input.number_input(
-                "PER promedio",
-                value=per_default,
-                min_value=0.0,
-                format="%.2f",
-                key=f"per_{t}",
-            )
-            beneficios = ben_input.number_input(
-                "Beneficios (M)",
-                value=beneficios_default,
-                format="%.2f",
-                key=f"beneficios_{t}",
-            )
+            with st.container(border=True):
+                st.markdown("**SEGÚN VENTAS**")
+                ps = st.number_input(
+                    "P/S promedio",
+                    value=ps_default,
+                    min_value=0.0,
+                    format="%.2f",
+                    key=f"ps_{t}",
+                )
+                ventas = st.number_input(
+                    "Ventas (M)",
+                    value=ventas_default,
+                    min_value=0.0,
+                    format="%.2f",
+                    key=f"ventas_{t}",
+                )
+                precio_ps = (ventas / shares) * ps if shares > 0 and ps > 0 else 0
+                st.metric("Precio", f"${precio_ps:,.1f}" if precio_ps else "N/A")
+                st.markdown("---")
+                st.latex(
+                    r"\frac{\text{Ventas}}{\text{Acciones}} \times \text{P/S promedio}"
+                )
+                st.caption(
+                    f"({ventas:.2f}M / {shares:.2f}M) × {ps:.2f} = ${precio_ps:,.2f}"
+                )
 
         with col3:
-            st.markdown("")
+            with st.container(border=True):
+                st.markdown("**SEGÚN FCF**")
+                pfcf = st.number_input(
+                    "P/FCF promedio",
+                    value=pfcf_default,
+                    min_value=0.0,
+                    format="%.2f",
+                    key=f"pfcf_{t}",
+                )
+                fcf = st.number_input(
+                    "Flujo de Caja (M)",
+                    value=fcf_default,
+                    format="%.2f",
+                    key=f"fcf_{t}",
+                )
+                precio_fcf = (fcf / shares) * pfcf if shares > 0 and pfcf > 0 else 0
+                st.metric("Precio", f"${precio_fcf:,.1f}" if precio_fcf else "N/A")
+                st.markdown("---")
+                st.latex(
+                    r"\frac{\text{FCF}}{\text{Acciones}} \times \text{P/FCF promedio}"
+                )
+                st.caption(
+                    f"({fcf:.2f}M / {shares:.2f}M) × {pfcf:.2f} = ${precio_fcf:,.2f}"
+                )
 
-        precio_per = (beneficios / shares) * per if shares > 0 and per > 0 else 0
-        precio_ps = (ventas / shares) * ps if shares > 0 and ps > 0 else 0
-        precio_fcf = (fcf / shares) * pfcf if shares > 0 and pfcf > 0 else 0
-
-        precios = [p for p in [precio_per, precio_ps, precio_fcf] if p > 0]
-        promedio = sum(precios) / len(precios) if precios else 0
-
-        metric_per.metric("Según PER", f"${precio_per:,.1f}" if precio_per else "N/A")
-        metric_ps.metric("Según Ventas", f"${precio_ps:,.1f}" if precio_ps else "N/A")
-        metric_fcf.metric("Según FCF", f"${precio_fcf:,.1f}" if precio_fcf else "N/A")
-        metric_promedio.metric("PROMEDIO", f"${promedio:,.1f}" if promedio else "N/A")
-
-        with col3:
-            st.markdown("**Fórmulas**")
-            st.markdown("**PER:**")
-            st.latex(
-                r"\frac{\text{Beneficios}}{\text{Acciones}} \times \text{PER promedio}"
-            )
-            st.caption(
-                f"({beneficios:.2f}M / {shares:.2f}M) × {per:.2f} = ${precio_per:,.2f}"
-            )
-
-            st.markdown("**P/S:**")
-            st.latex(
-                r"\frac{\text{Ventas}}{\text{Acciones}} \times \text{P/S promedio}"
-            )
-            st.caption(
-                f"({ventas:.2f}M / {shares:.2f}M) × {ps:.2f} = ${precio_ps:,.2f}"
-            )
-
-            st.markdown("**P/FCF:**")
-            st.latex(r"\frac{\text{FCF}}{\text{Acciones}} \times \text{P/FCF promedio}")
-            st.caption(
-                f"({fcf:.2f}M / {shares:.2f}M) × {pfcf:.2f} = ${precio_fcf:,.2f}"
-            )
-
-            st.markdown("---")
-            st.markdown("**PROMEDIO:**")
-            st.latex(r"\frac{\text{PER} + \text{P/S} + \text{P/FCF}}{3}")
-            precios_calc = [p for p in [precio_per, precio_ps, precio_fcf] if p > 0]
-            promedio_calc = sum(precios_calc) / len(precios_calc) if precios_calc else 0
-            st.caption(
-                f"(${precio_per:,.2f} + ${precio_ps:,.2f} + ${precio_fcf:,.2f}) / 3 = ${promedio_calc:,.2f}"
-            )
+        with col4:
+            with st.container(border=True):
+                st.markdown("**PROMEDIO**")
+                precios = [p for p in [precio_per, precio_ps, precio_fcf] if p > 0]
+                promedio = sum(precios) / len(precios) if precios else 0
+                st.metric("Precio", f"${promedio:,.1f}" if promedio else "N/A")
+                st.markdown("---")
+                st.latex(r"\frac{\text{PER} + \text{P/S} + \text{P/FCF}}{3}")
+                precios_calc = [p for p in [precio_per, precio_ps, precio_fcf] if p > 0]
+                promedio_calc = (
+                    sum(precios_calc) / len(precios_calc) if precios_calc else 0
+                )
+                st.caption(
+                    f"(${precio_per:,.2f} + ${precio_ps:,.2f} + ${precio_fcf:,.2f}) / 3 = ${promedio_calc:,.2f}"
+                )
 
         return promedio
 
     def _render_future_prices(
         self,
-        per: float,
-        ps: float,
-        pfcf: float,
+        per_default: float,
+        ps_default: float,
+        pfcf_default: float,
         info: StockInfo,
         t: str = "",
     ) -> float:
         st.subheader("Precios Futuros (Proyección)")
 
         shares = st.session_state.get(f"shares_{t}", 0.0)
+        per = st.session_state.get(f"per_{t}", per_default)
+        ps = st.session_state.get(f"ps_{t}", ps_default)
+        pfcf = st.session_state.get(f"pfcf_{t}", pfcf_default)
 
         col1, col2, col3 = st.columns(3)
         with col1:
