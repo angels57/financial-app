@@ -4,7 +4,7 @@ services:
   web:
     build: .
     ports:
-      - "8000:8000"
+      - "8501:8501"
     volumes:
       - .:/app
     # The command specified in the Dockerfile will be used

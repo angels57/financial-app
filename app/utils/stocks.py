@@ -3,6 +3,25 @@ from typing import Optional
 import plotly.graph_objects as go
 
 
+def calculate_yoy_growth(values: list[float]) -> list[float]:
+    """Calculate year-over-year growth rates for a list of values.
+
+    Returns a list of the same length where the first element is 0.0
+    and subsequent elements are the percentage change from the previous value.
+    """
+    yoy = []
+    for i in range(len(values)):
+        if i == 0:
+            yoy.append(0.0)
+        else:
+            if values[i - 1] > 0:
+                growth = ((values[i] - values[i - 1]) / values[i - 1]) * 100
+                yoy.append(growth)
+            else:
+                yoy.append(0.0)
+    return yoy
+
+
 def calculate_52_week_delta(
     current_price: float, reference_price: Optional[float]
 ) -> Optional[float]:

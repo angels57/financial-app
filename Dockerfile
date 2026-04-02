@@ -30,9 +30,8 @@ COPY --from=builder /app /app
 # Place the virtual environment binaries on the PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Expose the port the FastAPI app will run on
-EXPOSE 8000
+# Expose the port Streamlit will run on
+EXPOSE 8501
 
-# Command to run the application using the installed `fastapi` command
-# Ensure the host is 0.0.0.0 to be accessible outside the container
-CMD ["/app/.venv/bin/fastapi", "run", "app/main.py", "--port", "8000", "--host", "0.0.0.0"]
+# Command to run the Streamlit application
+CMD ["streamlit", "run", "app/main.py", "--server.port=8501", "--server.address=0.0.0.0"]

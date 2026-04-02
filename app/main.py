@@ -60,7 +60,7 @@ def main():
             st_tabs = st.tabs([t.title for t in tabs])
             for tab, st_tab in zip(tabs, st_tabs):
                 with st_tab:
-                    tab.render(
+                    tab.safe_render(
                         stock_service=stock_service,
                         info=info,
                         period=period,

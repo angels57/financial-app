@@ -9,6 +9,7 @@ from services import StockService
 from ui.base_tab import BaseTab
 from ui.components import render_diff_badge
 from utils import (
+    calculate_yoy_growth,
     draw_plotly_bar_chart,
     draw_plotly_dual_axis_chart,
     draw_plotly_multi_line_chart,
@@ -150,20 +151,7 @@ class FinancialsTab(BaseTab):
 
         with tabs[2]:
             if metrics.fcf_billions:
-                fcf_yoy = []
-                for i in range(len(metrics.fcf_billions)):
-                    if i == 0:
-                        fcf_yoy.append(0.0)
-                    else:
-                        if metrics.fcf_billions[i - 1] > 0:
-                            growth = (
-                                (metrics.fcf_billions[i] - metrics.fcf_billions[i - 1])
-                                / metrics.fcf_billions[i - 1]
-                            ) * 100
-                            fcf_yoy.append(growth)
-                        else:
-                            fcf_yoy.append(0.0)
-
+                fcf_yoy = calculate_yoy_growth(metrics.fcf_billions)
                 fig = draw_plotly_dual_axis_chart(
                     bar_values=metrics.fcf_billions,
                     line_values=fcf_yoy,
@@ -180,23 +168,7 @@ class FinancialsTab(BaseTab):
 
         with tabs[3]:
             if metrics.debt_billions:
-                debt_yoy = []
-                for i in range(len(metrics.debt_billions)):
-                    if i == 0:
-                        debt_yoy.append(0.0)
-                    else:
-                        if metrics.debt_billions[i - 1] > 0:
-                            growth = (
-                                (
-                                    metrics.debt_billions[i]
-                                    - metrics.debt_billions[i - 1]
-                                )
-                                / metrics.debt_billions[i - 1]
-                            ) * 100
-                            debt_yoy.append(growth)
-                        else:
-                            debt_yoy.append(0.0)
-
+                debt_yoy = calculate_yoy_growth(metrics.debt_billions)
                 fig = draw_plotly_dual_axis_chart(
                     bar_values=metrics.debt_billions,
                     line_values=debt_yoy,
@@ -228,18 +200,7 @@ class FinancialsTab(BaseTab):
         years = [str(idx) for idx in div_df.index]
         dividends = div_df["Dividend"].tolist()
 
-        div_growth = []
-        for i in range(len(dividends)):
-            if i == 0:
-                div_growth.append(0.0)
-            else:
-                if dividends[i - 1] > 0:
-                    growth = (
-                        (dividends[i] - dividends[i - 1]) / dividends[i - 1]
-                    ) * 100
-                    div_growth.append(growth)
-                else:
-                    div_growth.append(0.0)
+        div_growth = calculate_yoy_growth(dividends)
 
         fig = draw_plotly_dual_axis_chart(
             bar_values=dividends[-10:],
@@ -276,16 +237,7 @@ class FinancialsTab(BaseTab):
         shares = (shares_df.loc["Diluted Average Shares"] / 1e9).tolist()
         years = [str(c)[:4] for c in shares_df.columns]
 
-        shares_yoy = []
-        for i in range(len(shares)):
-            if i == 0:
-                shares_yoy.append(0.0)
-            else:
-                if shares[i - 1] > 0:
-                    growth = ((shares[i] - shares[i - 1]) / shares[i - 1]) * 100
-                    shares_yoy.append(growth)
-                else:
-                    shares_yoy.append(0.0)
+        shares_yoy = calculate_yoy_growth(shares)
 
         fig = draw_plotly_dual_axis_chart(
             bar_values=shares[-10:],
