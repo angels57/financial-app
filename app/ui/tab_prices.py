@@ -3,6 +3,7 @@
 import streamlit as st
 
 from models import StockInfo
+from scrapers.guru_focus_scraper import GuruFocusScraper
 from ui.base_tab import BaseTab
 
 
@@ -387,9 +388,14 @@ class PricesTab(BaseTab):
             with col3:
                 with st.container(border=True):
                     st.markdown("**GURUFOCUS**")
+                    fv_guru_default = st.session_state.get(f"fv_guru_{t}", None)
+                    if fv_guru_default is None:
+                        with st.spinner("Cargando GF Value..."):
+                            scraper = GuruFocusScraper(headless=True)
+                            fv_guru_default = scraper.get_fair_value(t) or 0.0
                     fv_guru = st.number_input(
                         "Fair Value",
-                        value=0.0,
+                        value=fv_guru_default,
                         min_value=0.0,
                         format="%.2f",
                         key=f"fv_guru_{t}",
