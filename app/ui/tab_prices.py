@@ -28,13 +28,13 @@ class PricesTab(BaseTab):
     def _render_inputs(self, info: StockInfo, t: str) -> tuple:
         st.subheader("Datos Fundamentales")
 
-        shares_default = (info.shares_outstanding or 0) / 1e6
-        per_default = info.pe_ratio or 0.0
-        ps_default = info.price_to_sales or 0.0
-        pfcf_default = info.price_to_fcf or 0.0
-        beneficios_default = (info.net_income or 0) / 1e6
-        ventas_default = (info.total_revenue or 0) / 1e6
-        fcf_default = (info.free_cash_flow or 0) / 1e6
+        shares_default = float((info.shares_outstanding or 0) / 1e6)
+        per_default = float(info.pe_ratio or 0)
+        ps_default = float(info.price_to_sales or 0)
+        pfcf_default = float(info.price_to_fcf or 0)
+        beneficios_default = float((info.net_income or 0) / 1e6)
+        ventas_default = float((info.total_revenue or 0) / 1e6)
+        fcf_default = float((info.free_cash_flow or 0) / 1e6)
 
         col1, col2 = st.columns(2)
 
