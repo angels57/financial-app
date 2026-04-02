@@ -52,7 +52,7 @@ def _fetch_info(ticker: str) -> StockInfo:
 
 @st.cache_data(ttl=CACHE_TTL, show_spinner=False)
 def _fetch_history(ticker: str, period: str) -> pd.DataFrame:
-    return yf.Ticker(ticker).history(period=period)[["Close"]]
+    return yf.Ticker(ticker).history(period=period)[["Close", "Volume"]]
 
 
 @st.cache_data(ttl=CACHE_TTL, show_spinner=False)

@@ -2,11 +2,12 @@
 
 import plotly.graph_objects as go
 import streamlit as st
+from plotly.subplots import make_subplots
 
 from models import StockInfo
 from services import StockService
 from ui.base_tab import BaseTab
-from utils import calculate_52_week_delta, format_large_number
+from utils import format_large_number
 
 
 class SummaryTab(BaseTab):
@@ -23,49 +24,77 @@ class SummaryTab(BaseTab):
         st.markdown("---")
         self._render_valuation_metrics(info)
         self._render_price_history(stock_service, info.currency, period)
+        st.markdown("---")
+        self._render_external_links(info)
 
     def _render_price_metrics(self, info: StockInfo) -> None:
-        col1, col2, col3 = st.columns(3)
-        low_delta = calculate_52_week_delta(info.price, info.week_52_low)
-        high_delta = calculate_52_week_delta(info.price, info.week_52_high)
+        col1, col2 = st.columns([1, 2])
 
         with col1:
             st.metric("Precio Actual", f"{info.currency} {info.price:,.2f}")
+
         with col2:
-            st.metric(
-                "Mínimo 52 Semanas",
-                f"{info.currency} {info.week_52_low:,.2f}"
-                if info.week_52_low
-                else "N/A",
-                f"{low_delta:+.2f}%" if low_delta else None,
-            )
-        with col3:
-            st.metric(
-                "Máximo 52 Semanas",
-                f"{info.currency} {info.week_52_high:,.2f}"
-                if info.week_52_high
-                else "N/A",
-                f"{high_delta:+.2f}%" if high_delta else None,
-            )
+            self._render_52_week_range(info)
+
+    def _render_52_week_range(self, info: StockInfo) -> None:
+        low = info.week_52_low
+        high = info.week_52_high
+
+        if not low or not high or high == low:
+            st.caption("Rango 52 semanas no disponible")
+            return
+
+        pct = ((info.price - low) / (high - low)) * 100
+        pct = max(0.0, min(100.0, pct))
+
+        bar_color = "#2ca02c" if pct < 70 else "#ff7f0e" if pct < 90 else "#d62728"
+
+        st.caption("Rango 52 Semanas")
+        st.markdown(
+            f"""
+            <div style="display:flex; align-items:center; gap:8px; font-size:0.85em;">
+                <span>{info.currency} {low:,.2f}</span>
+                <div style="flex:1; position:relative; height:8px;
+                            background:#e0e0e0; border-radius:4px;">
+                    <div style="width:{pct:.1f}%; height:100%;
+                                background:{bar_color}; border-radius:4px;"></div>
+                    <div style="position:absolute; top:-3px; left:calc({pct:.1f}% - 7px);
+                                width:14px; height:14px; background:{bar_color};
+                                border:2px solid white; border-radius:50%;
+                                box-shadow:0 1px 3px rgba(0,0,0,0.3);"></div>
+                </div>
+                <span>{info.currency} {high:,.2f}</span>
+            </div>
+            <div style="text-align:center; font-size:0.8em; margin-top:4px; color:#666;">
+                {info.currency} {info.price:,.2f} — {pct:.0f}% del rango
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     def _render_market_metrics(self, info: StockInfo) -> None:
-        c1, c2, c3, c4, c5, c6 = st.columns(6)
+        c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("Market Cap", format_large_number(info.market_cap, info.currency))
         c2.metric("P/E Ratio", f"{info.pe_ratio:.2f}" if info.pe_ratio else "N/A")
-        c3.metric("Volumen", f"{info.volume:,.0f}")
-        with c4:
+        c3.metric("P/S", f"{info.price_to_sales:.2f}" if info.price_to_sales else "N/A")
+        c4.metric("P/FCF", f"{info.price_to_fcf:.2f}" if info.price_to_fcf else "N/A")
+        c5.metric("Volumen", f"{info.volume:,.0f}")
+
+    def _render_external_links(self, info: StockInfo) -> None:
+        c1, c2, c3 = st.columns(3)
+        with c1:
             st.link_button(
                 "📈 TradingView",
                 f"https://www.tradingview.com/symbols/{info.ticker}/",
                 width="stretch",
             )
-        with c5:
+        with c2:
             st.link_button(
                 "🧠 AlphaSpread",
                 f"https://www.alphaspread.com/security/nasdaq/{info.ticker.lower()}/summary",
                 width="stretch",
             )
-        with c6:
+        with c3:
             st.link_button(
                 "💡 Smart Investor",
                 "https://thesmartinvestortool.com",
@@ -124,7 +153,14 @@ class SummaryTab(BaseTab):
         st.subheader(f"Historial de Precios ({period})")
         hist = stock_service.get_history(period=period)
         if not hist.empty:
-            fig = go.Figure()
+            fig = make_subplots(
+                rows=2,
+                cols=1,
+                shared_xaxes=True,
+                vertical_spacing=0.03,
+                row_heights=[0.75, 0.25],
+            )
+
             fig.add_trace(
                 go.Scatter(
                     x=hist.index,
@@ -137,12 +173,26 @@ class SummaryTab(BaseTab):
                     hovertemplate="%{x|%d %b %Y}<br>%{y:,.2f} "
                     + currency
                     + "<extra></extra>",
-                )
+                ),
+                row=1,
+                col=1,
             )
+
+            if "Volume" in hist.columns:
+                fig.add_trace(
+                    go.Bar(
+                        x=hist.index,
+                        y=hist["Volume"],
+                        name="Volumen",
+                        marker_color="rgba(31,119,180,0.3)",
+                        hovertemplate="%{x|%d %b %Y}<br>%{y:,.0f}<extra></extra>",
+                    ),
+                    row=2,
+                    col=1,
+                )
+
             fig.update_layout(
-                yaxis_title=f"Precio ({currency})",
-                xaxis_rangeslider_visible=True,
-                xaxis={
+                xaxis2={
                     "rangeselector": {
                         "buttons": [
                             {"count": 1, "label": "1M", "step": "month"},
@@ -158,11 +208,16 @@ class SummaryTab(BaseTab):
                             {"label": "Todo", "step": "all"},
                         ]
                     },
+                    "rangeslider": {"visible": True},
                 },
+                yaxis_title=f"Precio ({currency})",
+                yaxis2_title="Volumen",
                 hovermode="x unified",
-                height=500,
+                height=600,
                 margin={"l": 0, "r": 0, "t": 10, "b": 0},
+                showlegend=False,
             )
+
             st.plotly_chart(fig, width="stretch")
         else:
             st.warning("No hay datos históricos para este periodo.")
