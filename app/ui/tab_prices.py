@@ -349,53 +349,77 @@ class PricesTab(BaseTab):
                     width="content",
                 )
 
-            col1, col2, col3 = st.columns(3)
+            col1, col2, col3, col4 = st.columns(4)
+
             with col1:
-                fv_investing = st.number_input(
-                    "InvestingPro Fair Value",
-                    value=0.0,
-                    min_value=0.0,
-                    format="%.2f",
-                    key=f"fv_investing_{t}",
-                )
+                with st.container(border=True):
+                    st.markdown("**MI CÁLCULO**")
+                    st.metric(
+                        "Fair Value",
+                        f"${precio_promedio:,.1f}" if precio_promedio else "N/A",
+                    )
+                    if precio_promedio > 0 and precio_actual > 0:
+                        diff = (
+                            (precio_actual - precio_promedio) / precio_promedio
+                        ) * 100
+                        st.markdown("---")
+                        st.caption(f"vs precio actual: {diff:+.1f}%")
+
             with col2:
-                fv_guru = st.number_input(
-                    "GuruFocus Fair Value",
-                    value=0.0,
-                    min_value=0.0,
-                    format="%.2f",
-                    key=f"fv_guru_{t}",
-                )
+                with st.container(border=True):
+                    st.markdown("**INVESTINGPRO**")
+                    fv_investing = st.number_input(
+                        "Fair Value",
+                        value=0.0,
+                        min_value=0.0,
+                        format="%.2f",
+                        key=f"fv_investing_{t}",
+                    )
+                    st.metric(
+                        "Precio",
+                        f"${fv_investing:,.1f}" if fv_investing else "N/A",
+                    )
+                    if fv_investing > 0 and precio_actual > 0:
+                        diff_inv = ((precio_actual - fv_investing) / fv_investing) * 100
+                        st.markdown("---")
+                        st.caption(f"vs precio actual: {diff_inv:+.1f}%")
+
             with col3:
-                fv_alpha = st.number_input(
-                    "AlphaSpread Fair Value",
-                    value=0.0,
-                    min_value=0.0,
-                    format="%.2f",
-                    key=f"fv_alpha_{t}",
-                )
-
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric(
-                "Mi Cálculo",
-                f"${precio_promedio:,.1f}" if precio_promedio else "N/A",
-            )
-            c2.metric("InvestingPro", f"${fv_investing:,.1f}" if fv_investing else "—")
-            c3.metric("GuruFocus", f"${fv_guru:,.1f}" if fv_guru else "—")
-            c4.metric("AlphaSpread", f"${fv_alpha:,.1f}" if fv_alpha else "—")
-
-            if precio_promedio > 0 and precio_actual > 0:
-                diff = ((precio_actual - precio_promedio) / precio_promedio) * 100
-
-                if diff < -10:
-                    st.success(
-                        f"Oportunidad de compra ({diff:+.1f}% por debajo del precio justo)"
+                with st.container(border=True):
+                    st.markdown("**GURUFOCUS**")
+                    fv_guru = st.number_input(
+                        "Fair Value",
+                        value=0.0,
+                        min_value=0.0,
+                        format="%.2f",
+                        key=f"fv_guru_{t}",
                     )
-                elif diff <= 0:
-                    st.warning(
-                        f"Precio razonable ({diff:+.1f}% respecto al precio justo)"
+                    st.metric(
+                        "Precio",
+                        f"${fv_guru:,.1f}" if fv_guru else "N/A",
                     )
-                else:
-                    st.error(f"Le falta caer {diff:.1f}% para llegar al precio justo")
+                    if fv_guru > 0 and precio_actual > 0:
+                        diff_guru = ((precio_actual - fv_guru) / fv_guru) * 100
+                        st.markdown("---")
+                        st.caption(f"vs precio actual: {diff_guru:+.1f}%")
+
+            with col4:
+                with st.container(border=True):
+                    st.markdown("**ALPHASPREAD**")
+                    fv_alpha = st.number_input(
+                        "Fair Value",
+                        value=0.0,
+                        min_value=0.0,
+                        format="%.2f",
+                        key=f"fv_alpha_{t}",
+                    )
+                    st.metric(
+                        "Precio",
+                        f"${fv_alpha:,.1f}" if fv_alpha else "N/A",
+                    )
+                    if fv_alpha > 0 and precio_actual > 0:
+                        diff_alpha = ((precio_actual - fv_alpha) / fv_alpha) * 100
+                        st.markdown("---")
+                        st.caption(f"vs precio actual: {diff_alpha:+.1f}%")
 
         _fragment()
