@@ -364,7 +364,13 @@ class PricesTab(BaseTab):
                             (precio_actual - precio_promedio) / precio_promedio
                         ) * 100
                         st.markdown("---")
-                        st.caption(f"vs precio actual: {diff:+.1f}%")
+                        color = "green" if diff < 0 else "red"
+                        st.markdown(
+                            f'<span style="color:{color}; font-size:0.9em;">'
+                            f"vs precio actual: {diff:+.1f}%"
+                            f"</span>",
+                            unsafe_allow_html=True,
+                        )
 
             with col2:
                 with st.container(border=True):
@@ -383,7 +389,13 @@ class PricesTab(BaseTab):
                     if fv_investing > 0 and precio_actual > 0:
                         diff_inv = ((precio_actual - fv_investing) / fv_investing) * 100
                         st.markdown("---")
-                        st.caption(f"vs precio actual: {diff_inv:+.1f}%")
+                        color = "green" if diff_inv < 0 else "red"
+                        st.markdown(
+                            f'<span style="color:{color}; font-size:0.9em;">'
+                            f"vs precio actual: {diff_inv:+.1f}%"
+                            f"</span>",
+                            unsafe_allow_html=True,
+                        )
 
             with col3:
                 with st.container(border=True):
@@ -407,7 +419,13 @@ class PricesTab(BaseTab):
                     if fv_guru > 0 and precio_actual > 0:
                         diff_guru = ((precio_actual - fv_guru) / fv_guru) * 100
                         st.markdown("---")
-                        st.caption(f"vs precio actual: {diff_guru:+.1f}%")
+                        color = "green" if diff_guru < 0 else "red"
+                        st.markdown(
+                            f'<span style="color:{color}; font-size:0.9em;">'
+                            f"vs precio actual: {diff_guru:+.1f}%"
+                            f"</span>",
+                            unsafe_allow_html=True,
+                        )
 
             with col4:
                 with st.container(border=True):
@@ -426,6 +444,12 @@ class PricesTab(BaseTab):
                     if fv_alpha > 0 and precio_actual > 0:
                         diff_alpha = ((precio_actual - fv_alpha) / fv_alpha) * 100
                         st.markdown("---")
-                        st.caption(f"vs precio actual: {diff_alpha:+.1f}%")
+                        color = "green" if diff_alpha < 0 else "red"
+                        st.markdown(
+                            f'<span style="color:{color}; font-size:0.9em;">'
+                            f"vs precio actual: {diff_alpha:+.1f}%"
+                            f"</span>",
+                            unsafe_allow_html=True,
+                        )
 
         _fragment()
