@@ -6,7 +6,7 @@ from models import FinancialMetrics
 from services import StockService
 from ui.base_tab import BaseTab
 from ui.components import render_diff_badge
-from utils import draw_bar_chart, draw_multi_line_chart
+from utils import draw_plotly_bar_chart, draw_plotly_multi_line_chart
 
 
 METRIC_COLORS = {
@@ -71,8 +71,10 @@ class FinancialsTab(BaseTab):
         chart_data = metrics.to_summary_chart_data()
         if chart_data:
             data = {k: {"x": v.x, "y": v.y} for k, v in chart_data.items()}
-            fig = draw_multi_line_chart(data, f"{ticker} - Resumen Financiero", "Valor")
-            st.pyplot(fig, width="stretch")
+            fig = draw_plotly_multi_line_chart(
+                data, f"{ticker} - Resumen Financiero", "Valor"
+            )
+            st.plotly_chart(fig, use_container_width=True)
         else:
             st.info("No hay suficientes datos para generar el resumen.")
 
@@ -87,17 +89,17 @@ class FinancialsTab(BaseTab):
             col1, col2 = st.columns(2)
             with col1:
                 if metrics.revenue_billions:
-                    fig = draw_bar_chart(
+                    fig = draw_plotly_bar_chart(
                         metrics.revenue_billions,
                         metrics.years,
                         "Revenue",
-                        "Billions ($)",
+                        "Billones ($)",
                         color=METRIC_COLORS["Revenue"],
                     )
-                    st.pyplot(fig, width="stretch")
+                    st.plotly_chart(fig, use_container_width=True)
             with col2:
                 if metrics.sales_growth:
-                    fig = draw_bar_chart(
+                    fig = draw_plotly_bar_chart(
                         metrics.sales_growth,
                         metrics.years,
                         "Sales Growth",
@@ -106,13 +108,13 @@ class FinancialsTab(BaseTab):
                         signed=True,
                         color=METRIC_COLORS["Ratios"],
                     )
-                    st.pyplot(fig, width="stretch")
+                    st.plotly_chart(fig, use_container_width=True)
 
         with tabs[1]:
             col1, col2 = st.columns(2)
             with col1:
                 if metrics.net_margin:
-                    fig = draw_bar_chart(
+                    fig = draw_plotly_bar_chart(
                         metrics.net_margin,
                         metrics.years,
                         "Net Margin",
@@ -121,10 +123,10 @@ class FinancialsTab(BaseTab):
                         signed=True,
                         color=METRIC_COLORS["Ratios"],
                     )
-                    st.pyplot(fig, width="stretch")
+                    st.plotly_chart(fig, use_container_width=True)
             with col2:
                 if metrics.roe:
-                    fig = draw_bar_chart(
+                    fig = draw_plotly_bar_chart(
                         metrics.roe,
                         metrics.years,
                         "ROE",
@@ -133,19 +135,19 @@ class FinancialsTab(BaseTab):
                         signed=True,
                         color=METRIC_COLORS["Ratios"],
                     )
-                    st.pyplot(fig, width="stretch")
+                    st.plotly_chart(fig, use_container_width=True)
 
         with tabs[2]:
             if metrics.fcf_billions:
-                fig = draw_bar_chart(
+                fig = draw_plotly_bar_chart(
                     metrics.fcf_billions,
                     metrics.years,
                     "Free Cash Flow",
-                    "FCF (Billions)",
+                    "FCF (Billones)",
                     signed=True,
                     color=METRIC_COLORS["FCF"],
                 )
-                st.pyplot(fig, width="stretch")
+                st.plotly_chart(fig, use_container_width=True)
             else:
                 st.info("Datos de Free Cash Flow no disponibles.")
 
@@ -153,17 +155,17 @@ class FinancialsTab(BaseTab):
             col1, col2 = st.columns(2)
             with col1:
                 if metrics.debt_billions:
-                    fig = draw_bar_chart(
+                    fig = draw_plotly_bar_chart(
                         metrics.debt_billions,
                         metrics.years,
                         "Deuda Total",
-                        "Deuda (Billions)",
+                        "Deuda (Billones)",
                         color=METRIC_COLORS["Debt"],
                     )
-                    st.pyplot(fig, width="stretch")
+                    st.plotly_chart(fig, use_container_width=True)
             with col2:
                 if metrics.debt_equity:
-                    fig = draw_bar_chart(
+                    fig = draw_plotly_bar_chart(
                         metrics.debt_equity,
                         metrics.years,
                         "Deuda/Equity",
@@ -171,7 +173,7 @@ class FinancialsTab(BaseTab):
                         is_percent=True,
                         color=METRIC_COLORS["Ratios"],
                     )
-                    st.pyplot(fig, width="stretch")
+                    st.plotly_chart(fig, use_container_width=True)
 
     def _render_data_table(self, stock_service: StockService) -> None:
         with st.expander("Ver Datos del Estado de Resultados", expanded=False):

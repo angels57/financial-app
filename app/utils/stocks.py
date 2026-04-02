@@ -1,6 +1,6 @@
 from typing import Optional
 
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 
 def calculate_52_week_delta(
@@ -11,7 +11,7 @@ def calculate_52_week_delta(
     return ((current_price - reference_price) / reference_price) * 100
 
 
-def draw_bar_chart(
+def draw_plotly_bar_chart(
     values: list,
     labels: list,
     title: str,
@@ -19,45 +19,77 @@ def draw_bar_chart(
     color: str = "#1f77b4",
     is_percent: bool = False,
     signed: bool = False,
-) -> plt.Figure:
-    fig, ax = plt.subplots(figsize=(12, 4))
+) -> go.Figure:
     if signed:
         colors = ["#2ca02c" if v >= 0 else "#d62728" for v in values]
     else:
-        colors = color if isinstance(color, str) else color
-    ax.bar(labels, values, color=colors)
-    ax.set_title(title, fontsize=14)
-    ax.set_xlabel("Year")
-    ax.set_ylabel(ylabel)
-    ax.grid(True, alpha=0.3, axis="y")
+        colors = [color] * len(values)
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            x=labels,
+            y=values,
+            marker_color=colors,
+            text=[f"{v:+.1f}{'%' if is_percent else 'B'}" for v in values],
+            textposition="outside",
+        )
+    )
+
+    fig.update_layout(
+        title={"text": title, "font": {"size": 14}},
+        xaxis_title="Year",
+        yaxis_title=ylabel,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        showlegend=False,
+        height=350,
+        margin={"l": 0, "r": 0, "t": 40, "b": 0},
+    )
+
     if signed:
-        ax.axhline(y=0, color="black", linewidth=0.5)
-    for i, v in enumerate(values):
-        offset = 1 if not signed or v >= 0 else -1.5
-        if is_percent:
-            ax.text(i, v + offset, f"{v:.1f}%", ha="center", fontsize=9)
-        else:
-            prefix = "$" if not is_percent else ""
-            suffix = "B" if not is_percent else "%"
-            ax.text(i, v + offset, f"{prefix}{v:.1f}{suffix}", ha="center", fontsize=9)
+        fig.add_hline(y=0, line_width=0.5, line_color="black")
+
+    fig.update_yaxes(gridcolor="rgba(0,0,0,0.1)")
+
     return fig
 
 
-def draw_multi_line_chart(
+def draw_plotly_multi_line_chart(
     data: dict,
     title: str,
     ylabel: str,
     is_percent: bool = False,
-) -> plt.Figure:
-    fig, ax = plt.subplots(figsize=(12, 5))
+) -> go.Figure:
+    fig = go.Figure()
+
     for label, values in data.items():
-        ax.plot(values["x"], values["y"], marker="o", linewidth=2, label=label)
-    ax.set_title(title, fontsize=14)
-    ax.set_xlabel("Year")
-    ax.set_ylabel(ylabel)
-    ax.grid(True, alpha=0.3)
-    ax.legend(loc="best", framealpha=0.9)
+        fig.add_trace(
+            go.Scatter(
+                x=values["x"],
+                y=values["y"],
+                mode="lines+markers",
+                name=label,
+                line={"width": 2},
+            )
+        )
+
+    fig.update_layout(
+        title={"text": title, "font": {"size": 14}},
+        xaxis_title="Year",
+        yaxis_title=ylabel,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        hovermode="x unified",
+        height=400,
+        margin={"l": 0, "r": 0, "t": 40, "b": 0},
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02},
+    )
+
     if is_percent:
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:.1f}%"))
-    fig.autofmt_xdate()
+        fig.update_yaxes(tickformat=".1f%")
+
+    fig.update_xaxes(gridcolor="rgba(0,0,0,0.1)")
+    fig.update_yaxes(gridcolor="rgba(0,0,0,0.1)")
+
     return fig
