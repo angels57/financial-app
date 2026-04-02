@@ -93,3 +93,72 @@ def draw_plotly_multi_line_chart(
     fig.update_yaxes(gridcolor="rgba(0,0,0,0.1)")
 
     return fig
+
+
+def draw_plotly_dual_axis_chart(
+    bar_values: list,
+    line_values: list,
+    labels: list,
+    title: str,
+    bar_label: str,
+    line_label: str,
+    bar_color: str = "#1f77b4",
+    line_color: str = "#2ca02c",
+) -> go.Figure:
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Bar(
+            x=labels,
+            y=bar_values,
+            name=bar_label,
+            marker_color=bar_color,
+            text=[f"${v:.2f}" for v in bar_values],
+            textposition="outside",
+            yaxis="y",
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=labels,
+            y=line_values,
+            name=line_label,
+            mode="lines+markers",
+            line=dict(color=line_color, width=2),
+            yaxis="y2",
+            text=[f"{v:+.1f}%" for v in line_values],
+            textposition="top center",
+            hovertemplate="%{text}<extra></extra>",
+        )
+    )
+
+    fig.update_layout(
+        title={"text": title, "font": {"size": 14}},
+        xaxis=dict(
+            title="Año",
+            gridcolor="rgba(0,0,0,0.1)",
+        ),
+        yaxis=dict(
+            title=dict(text=bar_label, font=dict(color=bar_color)),
+            tickfont=dict(color=bar_color),
+            gridcolor="rgba(0,0,0,0.1)",
+            side="left",
+        ),
+        yaxis2=dict(
+            title=dict(text=line_label, font=dict(color=line_color)),
+            tickfont=dict(color=line_color),
+            overlaying="y",
+            side="right",
+            showticklabels=True,
+        ),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        hovermode="x unified",
+        height=400,
+        margin={"l": 50, "r": 50, "t": 40, "b": 0},
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02},
+        showlegend=True,
+    )
+
+    return fig

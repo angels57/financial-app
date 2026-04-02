@@ -10,6 +10,7 @@ from ui.base_tab import BaseTab
 from ui.components import render_diff_badge
 from utils import (
     draw_plotly_bar_chart,
+    draw_plotly_dual_axis_chart,
     draw_plotly_multi_line_chart,
     format_large_number,
 )
@@ -39,7 +40,7 @@ class FinancialsTab(BaseTab):
         st.markdown("---")
         self._render_summary_chart(ticker, metrics)
         st.markdown("---")
-        self._render_themed_tabs(ticker, metrics)
+        self._render_themed_tabs(ticker, metrics, stock_service)
         st.markdown("---")
         self._render_data_table(stock_service)
 
@@ -84,12 +85,16 @@ class FinancialsTab(BaseTab):
         else:
             st.info("No hay suficientes datos para generar el resumen.")
 
-    def _render_themed_tabs(self, ticker: str, metrics: FinancialMetrics) -> None:
+    def _render_themed_tabs(
+        self, ticker: str, metrics: FinancialMetrics, stock_service: StockService
+    ) -> None:
         if not metrics.years:
             st.info("Datos financieros no disponibles.")
             return
 
-        tabs = st.tabs(["Ingresos", "Rentabilidad", "Cash Flow", "Deuda"])
+        tabs = st.tabs(
+            ["Ingresos", "Rentabilidad", "Cash Flow", "Deuda", "Dividendos", "Acciones"]
+        )
 
         with tabs[0]:
             col1, col2 = st.columns(2)
@@ -158,28 +163,125 @@ class FinancialsTab(BaseTab):
                 st.info("Datos de Free Cash Flow no disponibles.")
 
         with tabs[3]:
-            col1, col2 = st.columns(2)
-            with col1:
-                if metrics.debt_billions:
-                    fig = draw_plotly_bar_chart(
-                        metrics.debt_billions,
-                        metrics.years,
-                        "Deuda Total",
-                        "Deuda (Billones)",
-                        color=METRIC_COLORS["Debt"],
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-            with col2:
-                if metrics.debt_equity:
-                    fig = draw_plotly_bar_chart(
-                        metrics.debt_equity,
-                        metrics.years,
-                        "Deuda/Equity",
-                        "Ratio (%)",
-                        is_percent=True,
-                        color=METRIC_COLORS["Ratios"],
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+            if metrics.debt_billions:
+                debt_yoy = []
+                for i in range(len(metrics.debt_billions)):
+                    if i == 0:
+                        debt_yoy.append(0.0)
+                    else:
+                        if metrics.debt_billions[i - 1] > 0:
+                            growth = (
+                                (
+                                    metrics.debt_billions[i]
+                                    - metrics.debt_billions[i - 1]
+                                )
+                                / metrics.debt_billions[i - 1]
+                            ) * 100
+                            debt_yoy.append(growth)
+                        else:
+                            debt_yoy.append(0.0)
+
+                fig = draw_plotly_dual_axis_chart(
+                    bar_values=metrics.debt_billions,
+                    line_values=debt_yoy,
+                    labels=metrics.years,
+                    title="Deuda Total",
+                    bar_label="Deuda (Billones $)",
+                    line_label="Cambio YoY (%)",
+                    bar_color=METRIC_COLORS["Debt"],
+                    line_color="#ff7f0e",
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("Datos de deuda no disponibles.")
+
+        with tabs[4]:
+            self._render_dividends_chart(stock_service)
+
+        with tabs[5]:
+            self._render_shares_chart(stock_service)
+
+    def _render_dividends_chart(self, stock_service: StockService) -> None:
+        div_df = stock_service.get_dividends()
+        info = stock_service.get_info()
+
+        if div_df is None or div_df.empty:
+            st.info("Datos de dividendos no disponibles.")
+            return
+
+        years = [str(idx) for idx in div_df.index]
+        dividends = div_df["Dividend"].tolist()
+
+        div_growth = []
+        for i in range(len(dividends)):
+            if i == 0:
+                div_growth.append(0.0)
+            else:
+                if dividends[i - 1] > 0:
+                    growth = (
+                        (dividends[i] - dividends[i - 1]) / dividends[i - 1]
+                    ) * 100
+                    div_growth.append(growth)
+                else:
+                    div_growth.append(0.0)
+
+        fig = draw_plotly_dual_axis_chart(
+            bar_values=dividends[-10:],
+            line_values=div_growth[-10:],
+            labels=years[-10:],
+            title="Dividendos por Acción",
+            bar_label="Dividendo ($)",
+            line_label="Crecimiento (%)",
+            bar_color="#2ca02c",
+            line_color="#ff7f0e",
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if info.dividend_yield is not None:
+                st.metric(
+                    "Dividend Yield (TTM)",
+                    f"{info.dividend_yield * 100:.2f}%",
+                )
+        with col2:
+            if dividends:
+                st.metric(
+                    "Último Dividendo Anual",
+                    f"${dividends[-1]:.2f}",
+                )
+
+    def _render_shares_chart(self, stock_service: StockService) -> None:
+        shares_df = stock_service.get_financials()
+        if shares_df is None or "Diluted Average Shares" not in shares_df.index:
+            st.info("Datos de acciones en circulación no disponibles.")
+            return
+
+        shares = (shares_df.loc["Diluted Average Shares"] / 1e9).tolist()
+        years = [str(c)[:4] for c in shares_df.columns]
+
+        shares_yoy = []
+        for i in range(len(shares)):
+            if i == 0:
+                shares_yoy.append(0.0)
+            else:
+                if shares[i - 1] > 0:
+                    growth = ((shares[i] - shares[i - 1]) / shares[i - 1]) * 100
+                    shares_yoy.append(growth)
+                else:
+                    shares_yoy.append(0.0)
+
+        fig = draw_plotly_dual_axis_chart(
+            bar_values=shares[-10:],
+            line_values=shares_yoy[-10:],
+            labels=years[-10:],
+            title="Acciones Promedio Diluidas",
+            bar_label="Acciones (Miles de Millones)",
+            line_label="Cambio YoY (%)",
+            bar_color="#9467bd",
+            line_color="#ff7f0e",
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
     def _render_data_table(self, stock_service: StockService) -> None:
         st.subheader("Estado de Resultados")

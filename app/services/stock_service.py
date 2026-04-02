@@ -87,6 +87,18 @@ def _fetch_news(ticker: str) -> list[dict]:
         return []
 
 
+@st.cache_data(ttl=CACHE_TTL, show_spinner=False)
+def _fetch_dividends(ticker: str) -> pd.DataFrame | None:
+    df = yf.Ticker(ticker).dividends
+    if df is None or df.empty:
+        return None
+    df = df.to_frame(name="Dividend")
+    df.index = pd.to_datetime(df.index)
+    df["Year"] = df.index.year
+    annual = df.groupby("Year")["Dividend"].sum()
+    return annual.to_frame()
+
+
 class StockService:
     """Responsabilidad única: obtener datos crudos de yfinance."""
 
@@ -149,3 +161,6 @@ class StockService:
                 )
             )
         return items
+
+    def get_dividends(self) -> pd.DataFrame | None:
+        return _fetch_dividends(self._ticker_symbol)
