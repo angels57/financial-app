@@ -18,6 +18,10 @@ class SummaryTab(BaseTab):
         self._render_price_metrics(info)
         st.markdown("---")
         self._render_market_metrics(info)
+        st.markdown("---")
+        self._render_company_profile(info)
+        st.markdown("---")
+        self._render_valuation_metrics(info)
         self._render_price_history(stock_service, info.currency, period)
 
     def _render_price_metrics(self, info: StockInfo) -> None:
@@ -55,6 +59,52 @@ class SummaryTab(BaseTab):
                 f"https://www.tradingview.com/symbols/{info.ticker}/",
                 use_container_width=True,
             )
+
+    def _render_company_profile(self, info: StockInfo) -> None:
+        st.subheader("Perfil de la Empresa")
+        col_info, col_desc = st.columns([1, 2])
+
+        with col_info:
+            if info.sector:
+                st.markdown(f"**Sector:** {info.sector}")
+            if info.industry:
+                st.markdown(f"**Industria:** {info.industry}")
+            if info.country:
+                st.markdown(f"**País:** {info.country}")
+            if info.employees is not None:
+                st.markdown(f"**Empleados:** {info.employees:,}")
+            if info.website:
+                st.markdown(f"**Web:** [{info.website}]({info.website})")
+
+        with col_desc:
+            if info.description:
+                preview = info.description[:300]
+                st.markdown(f"{preview}...")
+                with st.expander("Ver descripción completa"):
+                    st.write(info.description)
+            else:
+                st.info("Descripción no disponible.")
+
+    def _render_valuation_metrics(self, info: StockInfo) -> None:
+        st.subheader("Valuación & Trading")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric(
+            "EPS", f"{info.currency} {info.eps:.2f}" if info.eps is not None else "N/A"
+        )
+        c2.metric("Beta", f"{info.beta:.2f}" if info.beta is not None else "N/A")
+        c3.metric(
+            "Dividend Yield",
+            f"{info.dividend_yield * 100:.2f}%"
+            if info.dividend_yield is not None
+            else "N/A",
+        )
+        c4.metric(
+            "Target Price",
+            f"{info.currency} {info.target_price:,.2f}"
+            if info.target_price is not None
+            else "N/A",
+            info.recommendation.upper() if info.recommendation else None,
+        )
 
     def _render_price_history(
         self, stock_service: StockService, currency: str, period: str

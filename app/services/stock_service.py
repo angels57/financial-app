@@ -30,6 +30,17 @@ class StockService:
             volume=info.last_volume,
             week_52_low=full_info.get("fiftyTwoWeekLow"),
             week_52_high=full_info.get("fiftyTwoWeekHigh"),
+            sector=full_info.get("sector", ""),
+            industry=full_info.get("industry", ""),
+            country=full_info.get("country", ""),
+            employees=full_info.get("fullTimeEmployees"),
+            website=full_info.get("website", ""),
+            description=full_info.get("longBusinessSummary", ""),
+            beta=full_info.get("beta"),
+            dividend_yield=full_info.get("dividendYield"),
+            eps=full_info.get("trailingEps"),
+            target_price=full_info.get("targetMeanPrice"),
+            recommendation=full_info.get("recommendationKey", ""),
         )
 
     def get_history(self, period: str) -> pd.DataFrame:

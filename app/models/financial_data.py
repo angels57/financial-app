@@ -15,6 +15,17 @@ class StockInfo(BaseModel):
     volume: int = 0
     week_52_low: float | None = None
     week_52_high: float | None = None
+    sector: str = ""
+    industry: str = ""
+    country: str = ""
+    employees: int | None = None
+    website: str = ""
+    description: str = ""
+    beta: float | None = None
+    dividend_yield: float | None = None
+    eps: float | None = None
+    target_price: float | None = None
+    recommendation: str = ""
 
 
 class ChartSeries(BaseModel):

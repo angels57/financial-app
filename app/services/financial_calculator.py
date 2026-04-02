@@ -54,29 +54,31 @@ class FinancialCalculator:
             metrics.revenue_billions = (rev.values / 1e9).tolist()
             metrics.sales_growth = self._calc_growth(rev)
 
+        n_years = len(metrics.years)
+
         if has_revenue and has_net_income:
-            rev = financials.loc["Total Revenue"].iloc[:limit]
-            ni = financials.loc["Net Income"].iloc[:limit]
+            rev = financials.loc["Total Revenue"].iloc[:n_years]
+            ni = financials.loc["Net Income"].iloc[:n_years]
             metrics.net_income_billions = (ni.values / 1e9).tolist()
             metrics.net_margin = ((ni.values / rev.values) * 100).tolist()
 
         if has_net_income and has_equity:
-            ni = financials.loc["Net Income"].iloc[:limit]
-            equity = balance.loc["Stockholders Equity"].iloc[:limit]
+            ni = financials.loc["Net Income"].iloc[:n_years]
+            equity = balance.loc["Stockholders Equity"].iloc[:n_years]
             roe = self._calc_ratio(ni, equity)
             if roe is not None:
                 metrics.roe = roe
 
         if has_fcf:
-            fcf = cashflow.loc["Free Cash Flow"].iloc[:limit]
+            fcf = cashflow.loc["Free Cash Flow"].iloc[:n_years]
             metrics.fcf_billions = (fcf.values / 1e9).tolist()
 
         if has_debt:
-            debt = balance.loc["Total Debt"].iloc[:limit]
+            debt = balance.loc["Total Debt"].iloc[:n_years]
             metrics.debt_billions = (debt.values / 1e9).tolist()
 
             if has_equity:
-                equity = balance.loc["Stockholders Equity"].iloc[:limit]
+                equity = balance.loc["Stockholders Equity"].iloc[:n_years]
                 ratio = self._calc_ratio(debt, equity)
                 if ratio is not None:
                     metrics.debt_equity = ratio
