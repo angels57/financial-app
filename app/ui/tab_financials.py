@@ -331,6 +331,26 @@ class FinancialsTab(BaseTab):
 
     # -- Tabla de datos -------------------------------------------------------
 
+    # Income statement rows in funnel order: revenue -> costs -> profits -> per-share
+    _INCOME_ROWS: list[tuple[str, str, bool]] = [
+        # (yfinance_key, spanish_label, is_highlight)
+        ("Total Revenue", "Ingresos Totales", True),
+        ("Cost Of Revenue", "Coste de Ventas", False),
+        ("Gross Profit", "Beneficio Bruto", True),
+        ("_margin_gross", "  Margen Bruto (%)", False),
+        ("Research And Development", "I+D", False),
+        ("Selling General And Administration", "SG&A", False),
+        ("Operating Income", "Resultado Operativo (EBIT)", True),
+        ("_margin_operating", "  Margen Operativo (%)", False),
+        ("Interest Expense", "Gastos Financieros", False),
+        ("Pretax Income", "Resultado antes de Impuestos", False),
+        ("Tax Provision", "Impuestos", False),
+        ("Net Income", "Beneficio Neto", True),
+        ("_margin_net", "  Margen Neto (%)", False),
+        ("EBITDA", "EBITDA", True),
+        ("Diluted EPS", "EPS Diluido", False),
+    ]
+
     def _render_data_table(self, stock_service: StockService) -> None:
         st.subheader("Estado de Resultados")
         df = stock_service.get_financials()
@@ -338,71 +358,90 @@ class FinancialsTab(BaseTab):
             st.info("Datos del estado de resultados no disponibles.")
             return
 
-        row_label_map = {
-            "Total Revenue": "Ingresos Totales",
-            "Net Income": "Beneficio Neto",
-            "Operating Income": "Resultado Operativo",
-            "Gross Profit": "Beneficio Bruto",
-            "Interest Expense": "Gastos Financieros",
-            "Net Income Available To Common": "Beneficio Neto (Common)",
-            "Basic EPS": "EPS Básico",
-            "Diluted EPS": "EPS Diluido",
-            "Shares Outstanding": "Acciones en Circulación",
-            "Dividend per Share": "Dividendo por Acción",
-            "Interest Income": "Ingresos por Intereses",
-            "Income Tax Expense": "Impuesto sobre Beneficios",
-            "Research And Development": "I+D",
-            "Selling General And Administration": "SG&A",
-            "Cost Of Revenue": "Coste de Ingresos",
-            "Other Income Net": "Otros Ingresos Netos",
-        }
+        years = [str(c)[:4] for c in df.columns]
+        revenue = df.loc["Total Revenue"] if "Total Revenue" in df.index else None
 
-        display_df = df.copy()
-        display_df.index = display_df.index.map(lambda x: row_label_map.get(x, x))
-        display_df.columns = [str(c)[:4] for c in display_df.columns]
+        rows: list[tuple[str, list[str], bool]] = []
+        for key, label, is_bold in self._INCOME_ROWS:
+            if key.startswith("_margin_"):
+                row_values = self._calc_margin_row(key, df, revenue)
+                if row_values is None:
+                    continue
+                rows.append((label, row_values, False))
+            elif key in df.index:
+                raw = df.loc[key]
+                formatted = [
+                    format_large_number(v) if pd.notna(v) else "—" for v in raw
+                ]
+                rows.append((label, formatted, is_bold))
 
-        header_values = ["Concepto"] + [str(c) for c in display_df.columns]
-        cell_values = []
-        cell_colors = []
+        if not rows:
+            st.info("Datos del estado de resultados no disponibles.")
+            return
 
-        for row_idx, row_label in enumerate(display_df.index):
-            row_values = [row_label]
-            if row_idx % 2 == 0:
-                base_color = "#f8f9fa"
+        # Add YoY column for the most recent year
+        yoy_values = self._calc_yoy_column(df, rows)
+        header = ["Concepto"] + years + ["YoY %"]
+
+        # Build cell data
+        cell_labels = []
+        cell_columns: list[list[str]] = [[] for _ in range(len(years) + 1)]
+        fill_colors: list[list[str]] = []
+        font_colors: list[list[str]] = []
+
+        highlight_bg = "#e8f0fe"
+        for i, (label, values, is_bold) in enumerate(rows):
+            is_margin = label.startswith("  Margen")
+            base_bg = (
+                highlight_bg if is_bold else ("#f8f9fa" if i % 2 == 0 else "#ffffff")
+            )
+            text_color = "#888888" if is_margin else "#1a1a2e" if is_bold else "#2c3e50"
+
+            # Prepend marker to highlight rows visually
+            display_label = f"▸ {label}" if is_bold else label
+            cell_labels.append(display_label)
+            row_bg = [base_bg]
+            row_fc = [text_color]
+
+            for j, val_str in enumerate(values):
+                cell_columns[j].append(val_str)
+                row_bg.append(base_bg)
+                row_fc.append(text_color)
+
+            yoy = yoy_values[i]
+            cell_columns[len(years)].append(yoy)
+            if yoy and yoy != "—":
+                yoy_float = float(yoy.replace("%", "").replace("+", ""))
+                row_bg.append("#e6f4ea" if yoy_float >= 0 else "#fce8e6")
+                row_fc.append("#1e7e34" if yoy_float >= 0 else "#c0392b")
             else:
-                base_color = "#ffffff"
-            row_colors = [base_color]
-            for col in display_df.columns:
-                val = display_df.loc[row_label, col]
-                if pd.notna(val):
-                    row_values.append(format_large_number(val))
-                    if val < 0:
-                        row_colors.append("#ffcccc")
-                    else:
-                        row_colors.append(base_color)
-                else:
-                    row_values.append("N/A")
-                    row_colors.append(base_color)
-            cell_values.append(row_values)
-            cell_colors.append(row_colors)
+                row_bg.append(base_bg)
+                row_fc.append("#888888")
+
+            fill_colors.append(row_bg)
+            font_colors.append(row_fc)
+
+        all_columns = [cell_labels] + cell_columns
 
         fig = go.Figure(
             data=[
                 go.Table(
                     header=dict(
-                        values=header_values,
+                        values=header,
                         fill_color="#2c3e50",
-                        font_color="#ffffff",
-                        align="left",
-                        height=38,
                         font=dict(size=12, color="white"),
+                        align=["left"] + ["right"] * (len(years) + 1),
+                        height=38,
                     ),
                     cells=dict(
-                        values=list(zip(*cell_values)),
-                        fill_color=cell_colors,
-                        align="left",
+                        values=all_columns,
+                        fill_color=[list(col) for col in zip(*fill_colors)],
+                        font=dict(
+                            size=11,
+                            color=[list(col) for col in zip(*font_colors)],
+                        ),
+                        align=["left"] + ["right"] * (len(years) + 1),
                         height=32,
-                        font=dict(size=11, color="#2c3e50"),
                         line=dict(color="#dee2e6", width=1),
                     ),
                 )
@@ -411,7 +450,56 @@ class FinancialsTab(BaseTab):
 
         fig.update_layout(
             margin=dict(l=0, r=0, t=5, b=0),
-            height=38 + (len(display_df.index) * 32),
+            height=38 + (len(rows) * 32) + 10,
         )
 
         st.plotly_chart(fig, use_container_width=True)
+
+    @staticmethod
+    def _calc_margin_row(
+        key: str, df: pd.DataFrame, revenue: pd.Series | None
+    ) -> list[str] | None:
+        if revenue is None:
+            return None
+        margin_map = {
+            "_margin_gross": "Gross Profit",
+            "_margin_operating": "Operating Income",
+            "_margin_net": "Net Income",
+        }
+        numerator_key = margin_map.get(key)
+        if numerator_key is None or numerator_key not in df.index:
+            return None
+        numerator = df.loc[numerator_key]
+        values = []
+        for num, rev in zip(numerator, revenue):
+            if pd.notna(num) and pd.notna(rev) and rev != 0:
+                values.append(f"{(num / rev) * 100:.1f}%")
+            else:
+                values.append("—")
+        return values
+
+    def _calc_yoy_column(
+        self, df: pd.DataFrame, rows: list[tuple[str, list[str], bool]]
+    ) -> list[str]:
+        yoy_values = []
+        for key, label, _bold in self._INCOME_ROWS:
+            matching = [r for r in rows if r[0] == label]
+            if not matching:
+                continue
+
+            if key.startswith("_margin_"):
+                yoy_values.append("—")
+                continue
+
+            if key not in df.index or len(df.columns) < 2:
+                yoy_values.append("—")
+                continue
+
+            curr, prev = df.loc[key].iloc[0], df.loc[key].iloc[1]
+            if pd.notna(curr) and pd.notna(prev) and prev != 0:
+                change = ((curr - prev) / abs(prev)) * 100
+                yoy_values.append(f"{change:+.1f}%")
+            else:
+                yoy_values.append("—")
+
+        return yoy_values
