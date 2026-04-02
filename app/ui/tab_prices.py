@@ -189,51 +189,102 @@ class PricesTab(BaseTab):
         info: StockInfo,
         t: str = "",
     ) -> float:
-        st.subheader("Precios Futuros (Proyección)")
+        @st.fragment
+        def _fragment():
+            st.subheader("Precios Futuros (Proyección)")
 
-        shares = st.session_state.get(f"shares_{t}", 0.0)
-        per = st.session_state.get(f"per_{t}", per_default)
-        ps = st.session_state.get(f"ps_{t}", ps_default)
-        pfcf = st.session_state.get(f"pfcf_{t}", pfcf_default)
+            shares = st.session_state.get(f"shares_{t}", 0.0)
+            per = st.session_state.get(f"per_{t}", per_default)
+            ps = st.session_state.get(f"ps_{t}", ps_default)
+            pfcf = st.session_state.get(f"pfcf_{t}", pfcf_default)
 
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            ben_futuro = st.number_input(
-                "Beneficios futuros (M)",
-                value=0.0,
-                format="%.2f",
-                key=f"ben_futuro_{t}",
-            )
-        with col2:
-            ventas_futuro = st.number_input(
-                "Ventas futuras (M)",
-                value=0.0,
-                min_value=0.0,
-                format="%.2f",
-                key=f"ventas_futuro_{t}",
-            )
-        with col3:
-            fcf_futuro = st.number_input(
-                "Flujo de Caja futuro (M)",
-                value=0.0,
-                format="%.2f",
-                key=f"fcf_futuro_{t}",
-            )
+            col1, col2, col3, col4 = st.columns(4)
 
-        precio_eps = (ben_futuro / shares) * per if shares > 0 and per > 0 else 0
-        precio_ventas = (ventas_futuro / shares) * ps if shares > 0 and ps > 0 else 0
-        precio_fcf = (fcf_futuro / shares) * pfcf if shares > 0 and pfcf > 0 else 0
+            with col1:
+                with st.container(border=True):
+                    st.markdown("**SEGÚN EPS**")
+                    ben_futuro = st.number_input(
+                        "Beneficios futuros (M)",
+                        value=0.0,
+                        format="%.2f",
+                        key=f"ben_futuro_{t}",
+                    )
+                    precio_eps = (
+                        (ben_futuro / shares) * per if shares > 0 and per > 0 else 0
+                    )
+                    st.metric("Precio", f"${precio_eps:,.1f}" if precio_eps else "N/A")
+                    st.markdown("---")
+                    st.latex(
+                        r"\frac{\text{Ben. fut.}}{\text{Acciones}} \times \text{PER}"
+                    )
+                    st.caption(
+                        f"({ben_futuro:.2f}M / {shares:.2f}M) × {per:.2f} = ${precio_eps:,.2f}"
+                    )
 
-        precios = [p for p in [precio_eps, precio_ventas, precio_fcf] if p > 0]
-        promedio = sum(precios) / len(precios) if precios else 0
+            with col2:
+                with st.container(border=True):
+                    st.markdown("**SEGÚN VENTAS**")
+                    ventas_futuro = st.number_input(
+                        "Ventas futuras (M)",
+                        value=0.0,
+                        min_value=0.0,
+                        format="%.2f",
+                        key=f"ventas_futuro_{t}",
+                    )
+                    precio_ventas = (
+                        (ventas_futuro / shares) * ps if shares > 0 and ps > 0 else 0
+                    )
+                    st.metric(
+                        "Precio",
+                        f"${precio_ventas:,.1f}" if precio_ventas else "N/A",
+                    )
+                    st.markdown("---")
+                    st.latex(
+                        r"\frac{\text{Ventas fut.}}{\text{Acciones}} \times \text{P/S}"
+                    )
+                    st.caption(
+                        f"({ventas_futuro:.2f}M / {shares:.2f}M) × {ps:.2f} = ${precio_ventas:,.2f}"
+                    )
 
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Según EPS", f"${precio_eps:,.1f}" if precio_eps else "N/A")
-        c2.metric("Según Ventas", f"${precio_ventas:,.1f}" if precio_ventas else "N/A")
-        c3.metric("Según FCF", f"${precio_fcf:,.1f}" if precio_fcf else "N/A")
-        c4.metric("PROMEDIO", f"${promedio:,.1f}" if promedio else "N/A")
+            with col3:
+                with st.container(border=True):
+                    st.markdown("**SEGÚN FCF**")
+                    fcf_futuro = st.number_input(
+                        "Flujo de Caja futuro (M)",
+                        value=0.0,
+                        format="%.2f",
+                        key=f"fcf_futuro_{t}",
+                    )
+                    precio_fcf = (
+                        (fcf_futuro / shares) * pfcf if shares > 0 and pfcf > 0 else 0
+                    )
+                    st.metric("Precio", f"${precio_fcf:,.1f}" if precio_fcf else "N/A")
+                    st.markdown("---")
+                    st.latex(
+                        r"\frac{\text{FCF fut.}}{\text{Acciones}} \times \text{P/FCF}"
+                    )
+                    st.caption(
+                        f"({fcf_futuro:.2f}M / {shares:.2f}M) × {pfcf:.2f} = ${precio_fcf:,.2f}"
+                    )
 
-        return promedio
+            with col4:
+                with st.container(border=True):
+                    st.markdown("**PROMEDIO**")
+                    precios = [
+                        p for p in [precio_eps, precio_ventas, precio_fcf] if p > 0
+                    ]
+                    promedio = sum(precios) / len(precios) if precios else 0
+                    st.metric("Precio", f"${promedio:,.1f}" if promedio else "N/A")
+                    st.markdown("---")
+                    st.latex(r"\frac{\text{EPS} + \text{Ventas} + \text{FCF}}{3}")
+                    st.caption(
+                        f"(${precio_eps:,.2f} + ${precio_ventas:,.2f} + ${precio_fcf:,.2f}) / 3 = ${promedio:,.2f}"
+                    )
+
+            st.session_state[f"future_avg_{t}"] = promedio
+
+        _fragment()
+        return st.session_state.get(f"future_avg_{t}", 0.0)
 
     def _render_returns(
         self,
@@ -242,93 +293,109 @@ class PricesTab(BaseTab):
         dividend_yield: float | None,
         t: str = "",
     ) -> None:
-        st.subheader("Rentabilidad Esperada")
+        @st.fragment
+        def _fragment():
+            st.subheader("Rentabilidad Esperada")
+            future_avg = st.session_state.get(f"future_avg_{t}", precio_futuro)
 
-        col1, col2 = st.columns(2)
-        with col1:
-            horizonte = st.slider(
-                "Horizonte de inversión (años)",
-                min_value=1,
-                max_value=10,
-                value=5,
-                key=f"horizonte_{t}",
-            )
-        with col2:
-            div_yield = st.number_input(
-                "Dividend Yield (%)",
-                value=(dividend_yield or 0) * 100,
-                min_value=0.0,
-                format="%.2f",
-                key=f"div_yield_{t}",
-            )
+            col1, col2 = st.columns(2)
+            with col1:
+                horizonte = st.slider(
+                    "Horizonte de inversión (años)",
+                    min_value=1,
+                    max_value=10,
+                    value=5,
+                    key=f"horizonte_{t}",
+                )
+            with col2:
+                div_yield = st.number_input(
+                    "Dividend Yield (%)",
+                    value=float((dividend_yield or 0) * 100),
+                    min_value=0.0,
+                    format="%.2f",
+                    key=f"div_yield_{t}",
+                )
 
-        if precio_compra > 0 and precio_futuro > 0:
-            rentabilidad = ((precio_futuro - precio_compra) / precio_compra) * 100
-            r_anualizada = ((1 + rentabilidad / 100) ** (1 / horizonte) - 1) * 100
-            retorno_total = r_anualizada + div_yield
+            if precio_compra > 0 and future_avg > 0:
+                rentabilidad = ((future_avg - precio_compra) / precio_compra) * 100
+                r_anualizada = ((1 + rentabilidad / 100) ** (1 / horizonte) - 1) * 100
+                retorno_total = r_anualizada + div_yield
 
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Rentabilidad Total", f"{rentabilidad:,.2f}%")
-            c2.metric("R. Anualizada", f"{r_anualizada:,.2f}%", f"{horizonte} años")
-            c3.metric(
-                "Retorno Total", f"{retorno_total:,.2f}%", f"+{div_yield:.2f}% div"
-            )
-        else:
-            st.info("Ingresa datos de precios futuros para calcular la rentabilidad.")
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Rentabilidad Total", f"{rentabilidad:,.2f}%")
+                c2.metric("R. Anualizada", f"{r_anualizada:,.2f}%", f"{horizonte} años")
+                c3.metric(
+                    "Retorno Total",
+                    f"{retorno_total:,.2f}%",
+                    f"+{div_yield:.2f}% div",
+                )
+            else:
+                st.info(
+                    "Ingresa datos de precios futuros para calcular la rentabilidad."
+                )
+
+        _fragment()
 
     def _render_fair_value_comparison(
         self, precio_promedio: float, precio_actual: float, t: str = ""
     ) -> None:
-        st.subheader("Comparación con Fair Values Externos")
-        if t:
-            st.link_button(
-                "📊 Ver en InvestingPro",
-                f"https://www.investing.com/pro/{t.lower()}",
-                use_container_width=False,
-            )
-
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            fv_investing = st.number_input(
-                "InvestingPro Fair Value",
-                value=0.0,
-                min_value=0.0,
-                format="%.2f",
-                key=f"fv_investing_{t}",
-            )
-        with col2:
-            fv_guru = st.number_input(
-                "GuruFocus Fair Value",
-                value=0.0,
-                min_value=0.0,
-                format="%.2f",
-                key=f"fv_guru_{t}",
-            )
-        with col3:
-            fv_alpha = st.number_input(
-                "AlphaSpread Fair Value",
-                value=0.0,
-                min_value=0.0,
-                format="%.2f",
-                key=f"fv_alpha_{t}",
-            )
-
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric(
-            "Mi Cálculo", f"${precio_promedio:,.1f}" if precio_promedio else "N/A"
-        )
-        c2.metric("InvestingPro", f"${fv_investing:,.1f}" if fv_investing else "—")
-        c3.metric("GuruFocus", f"${fv_guru:,.1f}" if fv_guru else "—")
-        c4.metric("AlphaSpread", f"${fv_alpha:,.1f}" if fv_alpha else "—")
-
-        if precio_promedio > 0 and precio_actual > 0:
-            diff = ((precio_actual - precio_promedio) / precio_promedio) * 100
-
-            if diff < -10:
-                st.success(
-                    f"Oportunidad de compra ({diff:+.1f}% por debajo del precio justo)"
+        @st.fragment
+        def _fragment():
+            st.subheader("Comparación con Fair Values Externos")
+            if t:
+                st.link_button(
+                    "📊 Ver en InvestingPro",
+                    f"https://www.investing.com/pro/{t.lower()}",
+                    use_container_width=False,
                 )
-            elif diff <= 0:
-                st.warning(f"Precio razonable ({diff:+.1f}% respecto al precio justo)")
-            else:
-                st.error(f"Le falta caer {diff:.1f}% para llegar al precio justo")
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                fv_investing = st.number_input(
+                    "InvestingPro Fair Value",
+                    value=0.0,
+                    min_value=0.0,
+                    format="%.2f",
+                    key=f"fv_investing_{t}",
+                )
+            with col2:
+                fv_guru = st.number_input(
+                    "GuruFocus Fair Value",
+                    value=0.0,
+                    min_value=0.0,
+                    format="%.2f",
+                    key=f"fv_guru_{t}",
+                )
+            with col3:
+                fv_alpha = st.number_input(
+                    "AlphaSpread Fair Value",
+                    value=0.0,
+                    min_value=0.0,
+                    format="%.2f",
+                    key=f"fv_alpha_{t}",
+                )
+
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric(
+                "Mi Cálculo",
+                f"${precio_promedio:,.1f}" if precio_promedio else "N/A",
+            )
+            c2.metric("InvestingPro", f"${fv_investing:,.1f}" if fv_investing else "—")
+            c3.metric("GuruFocus", f"${fv_guru:,.1f}" if fv_guru else "—")
+            c4.metric("AlphaSpread", f"${fv_alpha:,.1f}" if fv_alpha else "—")
+
+            if precio_promedio > 0 and precio_actual > 0:
+                diff = ((precio_actual - precio_promedio) / precio_promedio) * 100
+
+                if diff < -10:
+                    st.success(
+                        f"Oportunidad de compra ({diff:+.1f}% por debajo del precio justo)"
+                    )
+                elif diff <= 0:
+                    st.warning(
+                        f"Precio razonable ({diff:+.1f}% respecto al precio justo)"
+                    )
+                else:
+                    st.error(f"Le falta caer {diff:.1f}% para llegar al precio justo")
+
+        _fragment()
