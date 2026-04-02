@@ -5,6 +5,7 @@ import streamlit as st
 from models import StockInfo
 from scrapers.guru_focus_scraper import GuruFocusScraper
 from ui.base_tab import BaseTab
+from ui.components import render_diff_badge
 
 
 class PricesTab(BaseTab):
@@ -110,6 +111,9 @@ class PricesTab(BaseTab):
                 st.caption(
                     f"({beneficios:.2f}M / {shares:.2f}M) × {per:.2f} = ${precio_per:,.2f}"
                 )
+                if precio_per > 0 and info.price > 0:
+                    diff_per = ((info.price - precio_per) / precio_per) * 100
+                    render_diff_badge(diff_per)
 
         with col2:
             with st.container(border=True):
@@ -137,6 +141,9 @@ class PricesTab(BaseTab):
                 st.caption(
                     f"({ventas:.2f}M / {shares:.2f}M) × {ps:.2f} = ${precio_ps:,.2f}"
                 )
+                if precio_ps > 0 and info.price > 0:
+                    diff_ps = ((info.price - precio_ps) / precio_ps) * 100
+                    render_diff_badge(diff_ps)
 
         with col3:
             with st.container(border=True):
@@ -163,6 +170,9 @@ class PricesTab(BaseTab):
                 st.caption(
                     f"({fcf:.2f}M / {shares:.2f}M) × {pfcf:.2f} = ${precio_fcf:,.2f}"
                 )
+                if precio_fcf > 0 and info.price > 0:
+                    diff_fcf = ((info.price - precio_fcf) / precio_fcf) * 100
+                    render_diff_badge(diff_fcf)
 
         with col4:
             with st.container(border=True):
@@ -179,6 +189,9 @@ class PricesTab(BaseTab):
                 st.caption(
                     f"(${precio_per:,.2f} + ${precio_ps:,.2f} + ${precio_fcf:,.2f}) / 3 = ${promedio_calc:,.2f}"
                 )
+                if promedio > 0 and info.price > 0:
+                    diff_prom = ((info.price - promedio) / promedio) * 100
+                    render_diff_badge(diff_prom)
 
         return promedio
 
@@ -364,13 +377,7 @@ class PricesTab(BaseTab):
                             (precio_actual - precio_promedio) / precio_promedio
                         ) * 100
                         st.markdown("---")
-                        color = "green" if diff < 0 else "red"
-                        st.markdown(
-                            f'<span style="color:{color}; font-size:0.9em;">'
-                            f"vs precio actual: {diff:+.1f}%"
-                            f"</span>",
-                            unsafe_allow_html=True,
-                        )
+                        render_diff_badge(diff)
 
             with col2:
                 with st.container(border=True):
@@ -389,13 +396,7 @@ class PricesTab(BaseTab):
                     if fv_investing > 0 and precio_actual > 0:
                         diff_inv = ((precio_actual - fv_investing) / fv_investing) * 100
                         st.markdown("---")
-                        color = "green" if diff_inv < 0 else "red"
-                        st.markdown(
-                            f'<span style="color:{color}; font-size:0.9em;">'
-                            f"vs precio actual: {diff_inv:+.1f}%"
-                            f"</span>",
-                            unsafe_allow_html=True,
-                        )
+                        render_diff_badge(diff_inv)
 
             with col3:
                 with st.container(border=True):
@@ -419,13 +420,7 @@ class PricesTab(BaseTab):
                     if fv_guru > 0 and precio_actual > 0:
                         diff_guru = ((precio_actual - fv_guru) / fv_guru) * 100
                         st.markdown("---")
-                        color = "green" if diff_guru < 0 else "red"
-                        st.markdown(
-                            f'<span style="color:{color}; font-size:0.9em;">'
-                            f"vs precio actual: {diff_guru:+.1f}%"
-                            f"</span>",
-                            unsafe_allow_html=True,
-                        )
+                        render_diff_badge(diff_guru)
 
             with col4:
                 with st.container(border=True):
@@ -444,12 +439,6 @@ class PricesTab(BaseTab):
                     if fv_alpha > 0 and precio_actual > 0:
                         diff_alpha = ((precio_actual - fv_alpha) / fv_alpha) * 100
                         st.markdown("---")
-                        color = "green" if diff_alpha < 0 else "red"
-                        st.markdown(
-                            f'<span style="color:{color}; font-size:0.9em;">'
-                            f"vs precio actual: {diff_alpha:+.1f}%"
-                            f"</span>",
-                            unsafe_allow_html=True,
-                        )
+                        render_diff_badge(diff_alpha)
 
         _fragment()
