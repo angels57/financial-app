@@ -7,7 +7,7 @@ from collections import deque
 import pandas as pd
 import requests
 
-from models import StockInfo
+from models import RSIResult, SMAResult, StockInfo
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +119,72 @@ class AlphaVantageService:
 
     def get_cashflow(self, ticker: str) -> pd.DataFrame | None:
         return self._fetch_statement(ticker, "CASH_FLOW", "annualReports")
+
+    def get_sma(
+        self,
+        ticker: str,
+        interval: str = "daily",
+        time_period: int = 20,
+        series_type: str = "close",
+    ) -> SMAResult | None:
+        data = self._request(
+            function="SMA",
+            symbol=ticker,
+            interval=interval,
+            time_period=time_period,
+            series_type=series_type,
+        )
+        if not data or "Technical Analysis: SMA" not in data:
+            return None
+        raw = data["Technical Analysis: SMA"]
+        result: dict[str, float] = {}
+        for date_str, vals in raw.items():
+            if "SMA" in vals:
+                try:
+                    result[date_str] = float(vals["SMA"])
+                except (ValueError, TypeError):
+                    pass
+        if not result:
+            return None
+        return SMAResult(
+            ticker=ticker,
+            time_period=time_period,
+            interval=interval,
+            data=result,
+        )
+
+    def get_rsi(
+        self,
+        ticker: str,
+        interval: str = "daily",
+        time_period: int = 14,
+        series_type: str = "close",
+    ) -> RSIResult | None:
+        data = self._request(
+            function="RSI",
+            symbol=ticker,
+            interval=interval,
+            time_period=time_period,
+            series_type=series_type,
+        )
+        if not data or "Technical Analysis: RSI" not in data:
+            return None
+        raw = data["Technical Analysis: RSI"]
+        result: dict[str, float] = {}
+        for date_str, vals in raw.items():
+            if "RSI" in vals:
+                try:
+                    result[date_str] = float(vals["RSI"])
+                except (ValueError, TypeError):
+                    pass
+        if not result:
+            return None
+        return RSIResult(
+            ticker=ticker,
+            time_period=time_period,
+            interval=interval,
+            data=result,
+        )
 
     # -- Private helpers ------------------------------------------------------
 

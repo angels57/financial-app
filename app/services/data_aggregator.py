@@ -52,8 +52,10 @@ class DataAggregator:
         if self._cache and not force_refresh:
             cached = self._cache.get_stock_info(self._ticker_symbol)
             if cached is not None:
+                logger.info("[%s] Info obtenida desde cache", self._ticker_symbol)
                 return cached
 
+        logger.info("[%s] Obteniendo info desde yfinance...", self._ticker_symbol)
         yf_info = self._yf.get_info()
         merged = self._merge_info(yf_info)
 
@@ -70,8 +72,18 @@ class DataAggregator:
         if self._cache:
             cached = self._cache.get_price_history(self._ticker_symbol, period, ttl)
             if cached is not None:
+                logger.info(
+                    "[%s] Precios (%s) obtenidos desde cache",
+                    self._ticker_symbol,
+                    period,
+                )
                 return cached
 
+        logger.info(
+            "[%s] Obteniendo precios (%s) desde yfinance...",
+            self._ticker_symbol,
+            period,
+        )
         df = self._yf.get_history(period)
 
         if self._cache and not df.empty:
@@ -98,13 +110,122 @@ class DataAggregator:
         if self._cache and not force_refresh:
             cached = self._cache.get_news(self._ticker_symbol)
             if cached is not None:
+                logger.info("[%s] Noticias obtenidas desde cache", self._ticker_symbol)
                 return cached
 
+        logger.info("[%s] Obteniendo noticias desde yfinance...", self._ticker_symbol)
         news = self._yf.get_news()
 
         if self._cache and news:
             self._cache.upsert_news(self._ticker_symbol, news, source="yfinance")
         return news
+
+    # -- Technical Indicators ---------------------------------------------------
+
+    _SMA_TTL = 14400
+    _RSI_TTL = 3600
+
+    def get_sma(
+        self,
+        time_period: int = 20,
+        interval: str = "daily",
+        force_refresh: bool = False,
+    ) -> dict[str, float] | None:
+        if self._av_service is None:
+            logger.warning(
+                "[%s] Alpha Vantage no disponible para SMA", self._ticker_symbol
+            )
+            return None
+        if self._cache and not force_refresh:
+            cached = self._cache.get_technical_indicator(
+                self._ticker_symbol, "SMA", interval, time_period, self._SMA_TTL
+            )
+            if cached is not None:
+                logger.info(
+                    "[%s] SMA (%s, %d) obtenido desde cache",
+                    self._ticker_symbol,
+                    interval,
+                    time_period,
+                )
+                return cached
+        logger.info(
+            "[%s] Obteniendo SMA (%s, %d) desde Alpha Vantage...",
+            self._ticker_symbol,
+            interval,
+            time_period,
+        )
+        result = self._av_service.get_sma(self._ticker_symbol, interval, time_period)
+        if result is None:
+            return None
+        if self._cache:
+            self._cache.upsert_technical_indicator(
+                self._ticker_symbol,
+                "SMA",
+                interval,
+                time_period,
+                result.data,
+                source="alphavantage",
+            )
+        return result.data
+
+    def get_multiple_sma(
+        self,
+        periods: list[int] | None = None,
+        interval: str = "daily",
+        force_refresh: bool = False,
+    ) -> dict[int, dict[str, float] | None]:
+        """Obtiene múltiples SMAs simultáneamente."""
+        if periods is None:
+            periods = [50, 100, 200]
+        results: dict[int, dict[str, float] | None] = {}
+        for period in periods:
+            results[period] = self.get_sma(
+                time_period=period, interval=interval, force_refresh=force_refresh
+            )
+        return results
+
+    def get_rsi(
+        self,
+        time_period: int = 14,
+        interval: str = "daily",
+        force_refresh: bool = False,
+    ) -> dict[str, float] | None:
+        if self._av_service is None:
+            logger.warning(
+                "[%s] Alpha Vantage no disponible para RSI", self._ticker_symbol
+            )
+            return None
+        if self._cache and not force_refresh:
+            cached = self._cache.get_technical_indicator(
+                self._ticker_symbol, "RSI", interval, time_period, self._RSI_TTL
+            )
+            if cached is not None:
+                logger.info(
+                    "[%s] RSI (%s, %d) obtenido desde cache",
+                    self._ticker_symbol,
+                    interval,
+                    time_period,
+                )
+                return cached
+        logger.info(
+            "[%s] Obteniendo RSI (%s, %d) desde Alpha Vantage...",
+            self._ticker_symbol,
+            interval,
+            time_period,
+        )
+        result = self._av_service.get_rsi(self._ticker_symbol, interval, time_period)
+        if result is None:
+            return None
+        if self._cache:
+            self._cache.upsert_technical_indicator(
+                self._ticker_symbol,
+                "RSI",
+                interval,
+                time_period,
+                result.data,
+                source="alphavantage",
+            )
+        return result.data
 
     # -- Private helpers ------------------------------------------------------
 
@@ -117,8 +238,14 @@ class DataAggregator:
         if self._cache and not force_refresh:
             cached = self._cache.get_financial_statement(self._ticker_symbol, statement)
             if cached is not None:
+                logger.info(
+                    "[%s] %s obtenido desde cache", self._ticker_symbol, statement
+                )
                 return cached
 
+        logger.info(
+            "[%s] Obteniendo %s desde yfinance...", self._ticker_symbol, statement
+        )
         yf_df = yf_fetcher()
         av_df = self._fetch_av_statement(statement)
         result = self._merge_dataframe(yf_df, av_df)
@@ -134,20 +261,38 @@ class DataAggregator:
         if self._av_service is None:
             return yf_info
         try:
+            logger.info(
+                "[%s] Complementando info desde Alpha Vantage...", self._ticker_symbol
+            )
             av_info = self._av_service.get_info(self._ticker_symbol)
         except Exception:
-            logger.warning("Alpha Vantage get_info failed, using yfinance only")
+            logger.warning(
+                "[%s] Error al obtener info desde Alpha Vantage, usando solo yfinance",
+                self._ticker_symbol,
+            )
             return yf_info
         if av_info is None:
+            logger.warning(
+                "[%s] Alpha Vantage no devolvió datos de info, usando solo yfinance",
+                self._ticker_symbol,
+            )
             return yf_info
 
         yf_dict = yf_info.model_dump()
         av_dict = av_info.model_dump()
+        filled = []
         for key, val in yf_dict.items():
             if val is None or val == "":
                 av_val = av_dict.get(key)
                 if av_val is not None and av_val != "":
                     yf_dict[key] = av_val
+                    filled.append(key)
+        if filled:
+            logger.info(
+                "[%s] Alpha Vantage completó campos faltantes: %s",
+                self._ticker_symbol,
+                ", ".join(filled),
+            )
         return StockInfo(**yf_dict)
 
     def _fetch_av_statement(self, statement: str) -> pd.DataFrame | None:
@@ -162,9 +307,25 @@ class DataAggregator:
         if method_name is None:
             return None
         try:
-            return getattr(self._av_service, method_name)(self._ticker_symbol)
+            logger.info(
+                "[%s] Complementando %s desde Alpha Vantage...",
+                self._ticker_symbol,
+                statement,
+            )
+            result = getattr(self._av_service, method_name)(self._ticker_symbol)
+            if result is None:
+                logger.warning(
+                    "[%s] Alpha Vantage no devolvió datos para %s",
+                    self._ticker_symbol,
+                    statement,
+                )
+            return result
         except Exception:
-            logger.warning("Alpha Vantage %s failed", statement)
+            logger.warning(
+                "[%s] Error al obtener %s desde Alpha Vantage, usando solo yfinance",
+                self._ticker_symbol,
+                statement,
+            )
             return None
 
     @staticmethod

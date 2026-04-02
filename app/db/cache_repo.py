@@ -180,3 +180,48 @@ class CacheRepository:
                 (ticker, source, data),
             )
             conn.commit()
+
+    def get_technical_indicator(
+        self,
+        ticker: str,
+        indicator: str,
+        interval: str,
+        time_period: int,
+        max_age_seconds: int,
+    ) -> dict[str, float] | None:
+        with self._pool.connection() as conn:
+            row = conn.execute(
+                "SELECT data_json, fetched_at FROM technical_indicators_cache "
+                "WHERE ticker = %s AND indicator = %s AND interval = %s AND time_period = %s",
+                (ticker, indicator, interval, time_period),
+            ).fetchone()
+        if row is None:
+            return None
+        fetched_at = row[1]
+        age = (datetime.now(timezone.utc) - fetched_at).total_seconds()
+        if age > max_age_seconds:
+            return None
+        return row[0]
+
+    def upsert_technical_indicator(
+        self,
+        ticker: str,
+        indicator: str,
+        interval: str,
+        time_period: int,
+        data: dict[str, float],
+        source: str,
+    ) -> None:
+        data_json = json.dumps(data)
+        with self._pool.connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO technical_indicators_cache (ticker, indicator, interval, time_period, data_json)
+                VALUES (%s, %s, %s, %s, %s::jsonb)
+                ON CONFLICT (ticker, indicator, interval, time_period) DO UPDATE
+                SET data_json = EXCLUDED.data_json,
+                    fetched_at = now()
+                """,
+                (ticker, indicator, interval, time_period, data_json),
+            )
+            conn.commit()

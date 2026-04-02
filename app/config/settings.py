@@ -6,12 +6,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "app"
-    debug: bool = False
-    db_url: str = ""
-    alpha_vantage_api_key: str = ""
-    price_cache_ttl_seconds: int = 300
-    log_level: str = "INFO"
+    app_name: str
+    debug: bool
+    db_url: str
+    alpha_vantage_api_key: str
+    price_cache_ttl_seconds: int
+    log_level: str
     log_file: str = "logs/app.json"
     sentry_dsn: str = ""
     environment: str = "development"

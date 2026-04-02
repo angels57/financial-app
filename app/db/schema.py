@@ -39,6 +39,16 @@ CREATE TABLE IF NOT EXISTS financial_statements_cache (
     fetched_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (ticker, statement)
 );
+
+CREATE TABLE IF NOT EXISTS technical_indicators_cache (
+    ticker       TEXT NOT NULL,
+    indicator    TEXT NOT NULL,
+    interval     TEXT NOT NULL,
+    time_period  INTEGER NOT NULL,
+    data_json    JSONB NOT NULL,
+    fetched_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (ticker, indicator, interval, time_period)
+);
 """
 
 
