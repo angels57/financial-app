@@ -150,13 +150,29 @@ class FinancialsTab(BaseTab):
 
         with tabs[2]:
             if metrics.fcf_billions:
-                fig = draw_plotly_bar_chart(
-                    metrics.fcf_billions,
-                    metrics.years,
-                    "Free Cash Flow",
-                    "FCF (Billones)",
-                    signed=True,
-                    color=METRIC_COLORS["FCF"],
+                fcf_yoy = []
+                for i in range(len(metrics.fcf_billions)):
+                    if i == 0:
+                        fcf_yoy.append(0.0)
+                    else:
+                        if metrics.fcf_billions[i - 1] > 0:
+                            growth = (
+                                (metrics.fcf_billions[i] - metrics.fcf_billions[i - 1])
+                                / metrics.fcf_billions[i - 1]
+                            ) * 100
+                            fcf_yoy.append(growth)
+                        else:
+                            fcf_yoy.append(0.0)
+
+                fig = draw_plotly_dual_axis_chart(
+                    bar_values=metrics.fcf_billions,
+                    line_values=fcf_yoy,
+                    labels=metrics.years,
+                    title="Free Cash Flow",
+                    bar_label="FCF (Billones $)",
+                    line_label="Cambio YoY (%)",
+                    bar_color="#2ca02c",
+                    line_color="#d62728",
                 )
                 st.plotly_chart(fig, use_container_width=True)
             else:
@@ -188,8 +204,8 @@ class FinancialsTab(BaseTab):
                     title="Deuda Total",
                     bar_label="Deuda (Billones $)",
                     line_label="Cambio YoY (%)",
-                    bar_color=METRIC_COLORS["Debt"],
-                    line_color="#ff7f0e",
+                    bar_color="#d62728",
+                    line_color="#1f77b4",
                 )
                 st.plotly_chart(fig, use_container_width=True)
             else:
@@ -279,7 +295,7 @@ class FinancialsTab(BaseTab):
             bar_label="Acciones (Miles de Millones)",
             line_label="Cambio YoY (%)",
             bar_color="#9467bd",
-            line_color="#ff7f0e",
+            line_color="#1f77b4",
         )
         st.plotly_chart(fig, use_container_width=True)
 
