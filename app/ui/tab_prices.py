@@ -112,11 +112,50 @@ class PricesTab(BaseTab):
         precios = [p for p in [precio_per, precio_ps, precio_fcf] if p > 0]
         promedio = sum(precios) / len(precios) if precios else 0
 
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Según PER", f"${precio_per:,.1f}" if precio_per else "N/A")
-        c2.metric("Según Ventas", f"${precio_ps:,.1f}" if precio_ps else "N/A")
-        c3.metric("Según FCF", f"${precio_fcf:,.1f}" if precio_fcf else "N/A")
-        c4.metric("PROMEDIO", f"${promedio:,.1f}" if promedio else "N/A")
+        col1, col2, col3 = st.columns([2, 1, 1])
+
+        with col1:
+            st.metric("Según PER", f"${precio_per:,.1f}" if precio_per else "N/A")
+            st.metric("Según Ventas", f"${precio_ps:,.1f}" if precio_ps else "N/A")
+            st.metric("Según FCF", f"${precio_fcf:,.1f}" if precio_fcf else "N/A")
+            st.markdown("---")
+            st.metric("PROMEDIO", f"${promedio:,.1f}" if promedio else "N/A")
+
+        with col2:
+            st.markdown("")
+
+        with col3:
+            st.markdown("**Fórmulas**")
+            st.markdown("**PER:**")
+            st.latex(
+                r"\frac{\text{Beneficios}}{\text{Acciones}} \times \text{PER promedio}"
+            )
+            st.caption(
+                f"({beneficios:.2f}M / {shares:.2f}M) × {per:.2f} = ${precio_per:,.2f}"
+            )
+
+            st.markdown("**P/S:**")
+            st.latex(
+                r"\frac{\text{Ventas}}{\text{Acciones}} \times \text{P/S promedio}"
+            )
+            st.caption(
+                f"({ventas:.2f}M / {shares:.2f}M) × {ps:.2f} = ${precio_ps:,.2f}"
+            )
+
+            st.markdown("**P/FCF:**")
+            st.latex(r"\frac{\text{FCF}}{\text{Acciones}} \times \text{P/FCF promedio}")
+            st.caption(
+                f"({fcf:.2f}M / {shares:.2f}M) × {pfcf:.2f} = ${precio_fcf:,.2f}"
+            )
+
+            st.markdown("---")
+            st.markdown("**PROMEDIO:**")
+            st.latex(r"\frac{\text{PER} + \text{P/S} + \text{P/FCF}}{3}")
+            precios_calc = [p for p in [precio_per, precio_ps, precio_fcf] if p > 0]
+            promedio_calc = sum(precios_calc) / len(precios_calc) if precios_calc else 0
+            st.caption(
+                f"(${precio_per:,.2f} + ${precio_ps:,.2f} + ${precio_fcf:,.2f}) / 3 = ${promedio_calc:,.2f}"
+            )
 
         return promedio
 
