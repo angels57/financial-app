@@ -5,6 +5,7 @@ import streamlit as st
 from models import FinancialMetrics
 from services import StockService
 from ui.base_tab import BaseTab
+from ui.components import render_diff_badge
 from utils import draw_bar_chart, draw_multi_line_chart
 
 
@@ -41,24 +42,29 @@ class FinancialsTab(BaseTab):
         cols = st.columns(4)
 
         kpi_config = [
-            ("Revenue", "${val:.2f}B", "{delta:+.2f}B", "normal"),
-            ("Net Margin", "{val:.1f}%", "{delta:+.1f}pp", "normal"),
-            ("FCF", "${val:.2f}B", "{delta:+.2f}B", "normal"),
-            ("Debt/Equity", "{val:.1f}%", "{delta:+.1f}pp", "inverse"),
+            ("Revenue", "${val:.2f}B", "var. YoY", False),
+            ("Net Margin", "{val:.1f}%", "var. YoY", False),
+            ("FCF", "${val:.2f}B", "var. YoY", False),
+            ("Debt/Equity", "{val:.1f}%", "var. YoY", True),
         ]
 
-        for col, (key, val_fmt, delta_fmt, delta_color) in zip(cols, kpi_config):
+        for col, (key, val_fmt, delta_label, is_inverse) in zip(cols, kpi_config):
             with col:
-                if key in deltas:
-                    val, delta, _ = deltas[key]
-                    st.metric(
-                        key,
-                        val_fmt.format(val=val) if val is not None else "N/A",
-                        delta_fmt.format(delta=delta) if delta is not None else None,
-                        delta_color=delta_color,
-                    )
-                else:
-                    st.metric(key, "N/A")
+                with st.container(border=True):
+                    if key in deltas:
+                        val, delta, _ = deltas[key]
+                        st.metric(
+                            key,
+                            val_fmt.format(val=val) if val is not None else "N/A",
+                        )
+                        if delta is not None and val is not None:
+                            if is_inverse:
+                                badge_delta = -delta
+                            else:
+                                badge_delta = delta
+                            render_diff_badge(badge_delta, label=delta_label)
+                    else:
+                        st.metric(key, "N/A")
 
     def _render_summary_chart(self, ticker: str, metrics: FinancialMetrics) -> None:
         st.subheader("Resumen Financiero (5 Años)")
