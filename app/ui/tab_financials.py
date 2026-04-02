@@ -66,7 +66,7 @@ class FinancialsTab(BaseTab):
         if chart_data:
             data = {k: {"x": v.x, "y": v.y} for k, v in chart_data.items()}
             fig = draw_multi_line_chart(data, f"{ticker} - Resumen Financiero", "Valor")
-            st.pyplot(fig, use_container_width=True)
+            st.pyplot(fig, width="stretch")
         else:
             st.info("No hay suficientes datos para generar el resumen.")
 
@@ -88,7 +88,7 @@ class FinancialsTab(BaseTab):
                         "Billions ($)",
                         color=METRIC_COLORS["Revenue"],
                     )
-                    st.pyplot(fig, use_container_width=True)
+                    st.pyplot(fig, width="stretch")
             with col2:
                 if metrics.sales_growth:
                     fig = draw_bar_chart(
@@ -100,7 +100,7 @@ class FinancialsTab(BaseTab):
                         signed=True,
                         color=METRIC_COLORS["Ratios"],
                     )
-                    st.pyplot(fig, use_container_width=True)
+                    st.pyplot(fig, width="stretch")
 
         with tabs[1]:
             col1, col2 = st.columns(2)
@@ -115,7 +115,7 @@ class FinancialsTab(BaseTab):
                         signed=True,
                         color=METRIC_COLORS["Ratios"],
                     )
-                    st.pyplot(fig, use_container_width=True)
+                    st.pyplot(fig, width="stretch")
             with col2:
                 if metrics.roe:
                     fig = draw_bar_chart(
@@ -127,7 +127,7 @@ class FinancialsTab(BaseTab):
                         signed=True,
                         color=METRIC_COLORS["Ratios"],
                     )
-                    st.pyplot(fig, use_container_width=True)
+                    st.pyplot(fig, width="stretch")
 
         with tabs[2]:
             if metrics.fcf_billions:
@@ -139,7 +139,7 @@ class FinancialsTab(BaseTab):
                     signed=True,
                     color=METRIC_COLORS["FCF"],
                 )
-                st.pyplot(fig, use_container_width=True)
+                st.pyplot(fig, width="stretch")
             else:
                 st.info("Datos de Free Cash Flow no disponibles.")
 
@@ -154,7 +154,7 @@ class FinancialsTab(BaseTab):
                         "Deuda (Billions)",
                         color=METRIC_COLORS["Debt"],
                     )
-                    st.pyplot(fig, use_container_width=True)
+                    st.pyplot(fig, width="stretch")
             with col2:
                 if metrics.debt_equity:
                     fig = draw_bar_chart(
@@ -165,12 +165,12 @@ class FinancialsTab(BaseTab):
                         is_percent=True,
                         color=METRIC_COLORS["Ratios"],
                     )
-                    st.pyplot(fig, use_container_width=True)
+                    st.pyplot(fig, width="stretch")
 
     def _render_data_table(self, stock_service: StockService) -> None:
         with st.expander("Ver Datos del Estado de Resultados", expanded=False):
             df = stock_service.get_financials()
             if df is not None and not df.empty:
-                st.dataframe(df.T, use_container_width=True)
+                st.dataframe(df.T, width="stretch")
             else:
                 st.info("Datos del estado de resultados no disponibles.")

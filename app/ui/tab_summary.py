@@ -57,19 +57,19 @@ class SummaryTab(BaseTab):
             st.link_button(
                 "📈 TradingView",
                 f"https://www.tradingview.com/symbols/{info.ticker}/",
-                use_container_width=True,
+                width="stretch",
             )
         with c5:
             st.link_button(
                 "🧠 AlphaSpread",
                 f"https://www.alphaspread.com/security/nasdaq/{info.ticker.lower()}/summary",
-                use_container_width=True,
+                width="stretch",
             )
         with c6:
             st.link_button(
                 "💡 Smart Investor",
                 "https://thesmartinvestortool.com",
-                use_container_width=True,
+                width="stretch",
             )
 
     def _render_company_profile(self, info: StockInfo) -> None:
@@ -163,6 +163,6 @@ class SummaryTab(BaseTab):
                 height=500,
                 margin={"l": 0, "r": 0, "t": 10, "b": 0},
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             st.warning("No hay datos históricos para este periodo.")

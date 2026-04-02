@@ -346,7 +346,7 @@ class PricesTab(BaseTab):
                 st.link_button(
                     "📊 Ver en InvestingPro",
                     f"https://www.investing.com/pro/{t.lower()}",
-                    use_container_width=False,
+                    width="content",
                 )
 
             col1, col2, col3 = st.columns(3)

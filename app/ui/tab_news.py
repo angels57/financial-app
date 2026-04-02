@@ -28,7 +28,7 @@ class NewsTab(BaseTab):
                 col_img, col_text = st.columns([1, 3])
                 with col_img:
                     if item.thumbnail:
-                        st.image(item.thumbnail, use_container_width=True)
+                        st.image(item.thumbnail, width="stretch")
                 with col_text:
                     st.markdown(f"**[{item.title}]({item.link})**")
                     caption_parts = [f"Fuente: {item.publisher}"]
