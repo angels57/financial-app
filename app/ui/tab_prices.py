@@ -104,6 +104,9 @@ class PricesTab(BaseTab):
                     (beneficios / shares) * per if shares > 0 and per > 0 else 0
                 )
                 st.metric("Precio", f"${precio_per:,.1f}" if precio_per else "N/A")
+                if precio_per > 0 and info.price > 0:
+                    diff_per = ((precio_per - info.price) / info.price) * 100
+                    render_diff_badge(diff_per)
                 st.markdown("---")
                 st.latex(
                     r"\frac{\text{Beneficios}}{\text{Acciones}} \times \text{PER promedio}"
@@ -111,9 +114,6 @@ class PricesTab(BaseTab):
                 st.caption(
                     f"({beneficios:.2f}M / {shares:.2f}M) × {per:.2f} = ${precio_per:,.2f}"
                 )
-                if precio_per > 0 and info.price > 0:
-                    diff_per = ((info.price - precio_per) / precio_per) * 100
-                    render_diff_badge(diff_per)
 
         with col2:
             with st.container(border=True):
@@ -134,6 +134,9 @@ class PricesTab(BaseTab):
                 )
                 precio_ps = (ventas / shares) * ps if shares > 0 and ps > 0 else 0
                 st.metric("Precio", f"${precio_ps:,.1f}" if precio_ps else "N/A")
+                if precio_ps > 0 and info.price > 0:
+                    diff_ps = ((precio_ps - info.price) / info.price) * 100
+                    render_diff_badge(diff_ps)
                 st.markdown("---")
                 st.latex(
                     r"\frac{\text{Ventas}}{\text{Acciones}} \times \text{P/S promedio}"
@@ -141,9 +144,6 @@ class PricesTab(BaseTab):
                 st.caption(
                     f"({ventas:.2f}M / {shares:.2f}M) × {ps:.2f} = ${precio_ps:,.2f}"
                 )
-                if precio_ps > 0 and info.price > 0:
-                    diff_ps = ((info.price - precio_ps) / precio_ps) * 100
-                    render_diff_badge(diff_ps)
 
         with col3:
             with st.container(border=True):
@@ -163,6 +163,9 @@ class PricesTab(BaseTab):
                 )
                 precio_fcf = (fcf / shares) * pfcf if shares > 0 and pfcf > 0 else 0
                 st.metric("Precio", f"${precio_fcf:,.1f}" if precio_fcf else "N/A")
+                if precio_fcf > 0 and info.price > 0:
+                    diff_fcf = ((precio_fcf - info.price) / info.price) * 100
+                    render_diff_badge(diff_fcf)
                 st.markdown("---")
                 st.latex(
                     r"\frac{\text{FCF}}{\text{Acciones}} \times \text{P/FCF promedio}"
@@ -170,9 +173,6 @@ class PricesTab(BaseTab):
                 st.caption(
                     f"({fcf:.2f}M / {shares:.2f}M) × {pfcf:.2f} = ${precio_fcf:,.2f}"
                 )
-                if precio_fcf > 0 and info.price > 0:
-                    diff_fcf = ((info.price - precio_fcf) / precio_fcf) * 100
-                    render_diff_badge(diff_fcf)
 
         with col4:
             with st.container(border=True):
@@ -180,6 +180,9 @@ class PricesTab(BaseTab):
                 precios = [p for p in [precio_per, precio_ps, precio_fcf] if p > 0]
                 promedio = sum(precios) / len(precios) if precios else 0
                 st.metric("Precio", f"${promedio:,.1f}" if promedio else "N/A")
+                if promedio > 0 and info.price > 0:
+                    diff_prom = ((promedio - info.price) / info.price) * 100
+                    render_diff_badge(diff_prom)
                 st.markdown("---")
                 st.latex(r"\frac{\text{PER} + \text{P/S} + \text{P/FCF}}{3}")
                 precios_calc = [p for p in [precio_per, precio_ps, precio_fcf] if p > 0]
@@ -189,9 +192,6 @@ class PricesTab(BaseTab):
                 st.caption(
                     f"(${precio_per:,.2f} + ${precio_ps:,.2f} + ${precio_fcf:,.2f}) / 3 = ${promedio_calc:,.2f}"
                 )
-                if promedio > 0 and info.price > 0:
-                    diff_prom = ((info.price - promedio) / promedio) * 100
-                    render_diff_badge(diff_prom)
 
         return promedio
 
@@ -373,10 +373,7 @@ class PricesTab(BaseTab):
                         f"${precio_promedio:,.1f}" if precio_promedio else "N/A",
                     )
                     if precio_promedio > 0 and precio_actual > 0:
-                        diff = (
-                            (precio_actual - precio_promedio) / precio_promedio
-                        ) * 100
-                        st.markdown("---")
+                        diff = ((precio_promedio - precio_actual) / precio_actual) * 100
                         render_diff_badge(diff)
 
             with col2:
@@ -394,8 +391,9 @@ class PricesTab(BaseTab):
                         f"${fv_investing:,.1f}" if fv_investing else "N/A",
                     )
                     if fv_investing > 0 and precio_actual > 0:
-                        diff_inv = ((precio_actual - fv_investing) / fv_investing) * 100
-                        st.markdown("---")
+                        diff_inv = (
+                            (fv_investing - precio_actual) / precio_actual
+                        ) * 100
                         render_diff_badge(diff_inv)
 
             with col3:
@@ -418,8 +416,7 @@ class PricesTab(BaseTab):
                         f"${fv_guru:,.1f}" if fv_guru else "N/A",
                     )
                     if fv_guru > 0 and precio_actual > 0:
-                        diff_guru = ((precio_actual - fv_guru) / fv_guru) * 100
-                        st.markdown("---")
+                        diff_guru = ((fv_guru - precio_actual) / precio_actual) * 100
                         render_diff_badge(diff_guru)
 
             with col4:
@@ -437,8 +434,7 @@ class PricesTab(BaseTab):
                         f"${fv_alpha:,.1f}" if fv_alpha else "N/A",
                     )
                     if fv_alpha > 0 and precio_actual > 0:
-                        diff_alpha = ((precio_actual - fv_alpha) / fv_alpha) * 100
-                        st.markdown("---")
+                        diff_alpha = ((fv_alpha - precio_actual) / precio_actual) * 100
                         render_diff_badge(diff_alpha)
 
         _fragment()
