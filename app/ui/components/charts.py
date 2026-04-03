@@ -207,7 +207,7 @@ class _TechnicalChartBuilder:
         legend: dict | None = None,
     ) -> None:
         layout_updates: dict = {
-            "xaxis" + xaxis_key[4:]: {
+            xaxis_key: {
                 "rangeselector": {"buttons": self._RANGESELECTOR_BUTTONS},
                 "rangeslider": {"visible": True},
             },

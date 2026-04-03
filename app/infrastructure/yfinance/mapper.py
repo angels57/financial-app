@@ -67,10 +67,15 @@ class YFinanceMapper:
                 if res:
                     thumbnail = res[-1].get("url", "")
 
+            title = item.get("title", "")
+            link = item.get("link", "")
+            if not title or not link:
+                continue
+
             items.append(
                 NewsItem(
-                    title=item.get("title", ""),
-                    link=item.get("link", ""),
+                    title=title,
+                    link=link,
                     publisher=item.get("publisher", "Fuente desconocida"),
                     thumbnail=thumbnail,
                     published_at=item.get("providerPublishTime", ""),

@@ -25,6 +25,8 @@ class NewsTab(BaseTab):
             return
 
         for item in news:
+            if not item.title or not item.link:
+                continue
             with st.container():
                 col_img, col_text = st.columns([1, 3])
                 with col_img:
