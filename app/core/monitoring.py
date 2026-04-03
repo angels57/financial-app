@@ -37,7 +37,7 @@ def init_monitoring(dsn: str | None = None, environment: str = "development") ->
         )
         _initialized = True
         logger.info(f"Sentry monitoring initialized (env={environment})")
-    except Exception:
+    except (ValueError, OSError):
         logger.warning("Failed to initialize Sentry, continuing without monitoring")
 
 

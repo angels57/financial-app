@@ -1,6 +1,8 @@
 """Main application entry point."""
 
+import psycopg
 import streamlit as st
+from yfinance.exceptions import YFException
 
 from config import settings
 from core import get_app_logger, init_monitoring
@@ -88,7 +90,7 @@ def main() -> None:
 
             logger.info(f"Dashboard actualizado para {ticker}")
 
-        except Exception as e:
+        except (YFException, psycopg.Error, KeyError, ValueError) as e:
             st.error(f"Error al obtener datos: {str(e)}")
             logger.error(f"Error en main: {str(e)}")
 

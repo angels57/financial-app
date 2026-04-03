@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+import psycopg
 import streamlit as st
 
 if TYPE_CHECKING:
@@ -58,7 +59,7 @@ def _render_consulted_companies(cache_repo: CacheRepository) -> None:
     """Show recently consulted companies from the database."""
     try:
         companies = cache_repo.get_consulted_companies()
-    except Exception as e:
+    except psycopg.Error as e:
         import logging
 
         logging.getLogger(__name__).warning("Failed to load consulted companies: %s", e)

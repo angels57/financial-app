@@ -7,7 +7,9 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 import pandas as pd
+import psycopg
 import yfinance as yf
+from yfinance.exceptions import YFException
 
 from domain.models import NewsItem, StockInfo
 from infrastructure.yfinance.mapper import YFinanceMapper
@@ -19,6 +21,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 _SOURCE = "yfinance"
+
+# Exceptions raised by psycopg on any DB interaction.
+_CacheError = psycopg.Error
 
 
 class YFinanceClient:
@@ -53,7 +58,7 @@ class YFinanceClient:
                 cached = self._cache.get_stock_info(self._ticker)
                 if cached is not None:
                     return cached
-            except Exception:
+            except _CacheError:
                 logger.warning("Cache read failed for stock_info/%s", self._ticker)
 
         info = self._mapper.to_stock_info(self._ticker, self._yf.info, self._yf)
@@ -64,7 +69,7 @@ class YFinanceClient:
                     self._ticker, info.short_name, info.sector
                 )
                 self._cache.upsert_stock_info(self._ticker, info, _SOURCE)
-            except Exception:
+            except _CacheError:
                 logger.warning("Cache write failed for stock_info/%s", self._ticker)
 
         return info
@@ -82,7 +87,7 @@ class YFinanceClient:
                 )
                 if cached is not None:
                     return cached
-            except Exception:
+            except _CacheError:
                 logger.warning(
                     "Cache read failed for price_history/%s/%s", self._ticker, period
                 )
@@ -92,7 +97,7 @@ class YFinanceClient:
         if self._cache and not df.empty:
             try:
                 self._cache.upsert_price_history(self._ticker, period, df, _SOURCE)
-            except Exception:
+            except _CacheError:
                 logger.warning(
                     "Cache write failed for price_history/%s/%s", self._ticker, period
                 )
@@ -131,18 +136,18 @@ class YFinanceClient:
                 cached = self._cache.get_financial_statement(self._ticker, name)
                 if cached is not None:
                     return cached
-            except Exception:
+            except _CacheError:
                 logger.warning("Cache read failed for %s/%s", name, self._ticker)
 
         try:
             df = fetcher()
-        except Exception:
+        except YFException:
             return None
 
         if self._cache and df is not None and not df.empty:
             try:
                 self._cache.upsert_financial_statement(self._ticker, name, df, _SOURCE)
-            except Exception:
+            except _CacheError:
                 logger.warning("Cache write failed for %s/%s", name, self._ticker)
 
         return df
@@ -160,7 +165,7 @@ class YFinanceClient:
             df["Year"] = df.index.year
             annual = df.groupby("Year")["Dividend"].sum()
             return annual.to_frame()
-        except Exception:
+        except (YFException, KeyError, ValueError):
             return None
 
     # -- News -----------------------------------------------------------------
@@ -172,7 +177,7 @@ class YFinanceClient:
                 cached = self._cache.get_news(self._ticker)
                 if cached is not None:
                     return cached  # type: ignore[no-any-return]
-            except Exception:
+            except _CacheError:
                 logger.warning("Cache read failed for news/%s", self._ticker)
 
         try:
@@ -180,13 +185,13 @@ class YFinanceClient:
             items: list[NewsItem] = (
                 self._mapper.to_news_items(self._ticker, yf_news) if yf_news else []
             )
-        except Exception:
+        except (YFException, KeyError, TypeError):
             return []
 
         if self._cache and items:
             try:
                 self._cache.upsert_news(self._ticker, items, _SOURCE)
-            except Exception:
+            except _CacheError:
                 logger.warning("Cache write failed for news/%s", self._ticker)
 
         return items
@@ -248,7 +253,7 @@ class YFinanceClient:
                 )
                 if cached is not None:
                     return cached  # type: ignore[no-any-return]
-            except Exception:
+            except _CacheError:
                 logger.warning("Cache read failed for %s/%s", indicator, self._ticker)
 
         result = fetcher(self._ticker, interval, time_period)
@@ -258,7 +263,7 @@ class YFinanceClient:
                 self._cache.upsert_technical_indicator(
                     self._ticker, indicator, interval, time_period, result, _SOURCE
                 )
-            except Exception:
+            except _CacheError:
                 logger.warning("Cache write failed for %s/%s", indicator, self._ticker)
 
         return result

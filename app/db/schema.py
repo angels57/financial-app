@@ -2,6 +2,7 @@
 
 import logging
 
+import psycopg
 from psycopg_pool import ConnectionPool
 
 logger = logging.getLogger(__name__)
@@ -67,5 +68,5 @@ def init_db(pool: ConnectionPool) -> None:
             conn.execute(_DDL)
             conn.commit()
         logger.info("Database schema initialized")
-    except Exception:
+    except psycopg.Error:
         logger.exception("Failed to initialize database schema")
