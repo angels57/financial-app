@@ -1,7 +1,9 @@
-from .data_aggregator import DataAggregator
-from .financial_calculator import FinancialCalculator
-from .stock_service import StockService
-from .yfinance_technical_service import YfinanceTechnicalService
+"""Services package — re-exports for backward compatibility."""
+
+from domain.services.calculator import FinancialCalculator
+from services.data_aggregator import DataAggregator
+from services.stock_service import StockService
+from services.yfinance_technical_service import YfinanceTechnicalService
 
 __all__ = [
     "DataAggregator",

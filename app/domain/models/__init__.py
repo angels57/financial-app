@@ -1,12 +1,10 @@
-"""Models package — re-exports from domain.models for backward compatibility."""
+"""Domain models package."""
 
-from domain.models import (
-    ChartSeries,
-    FinancialMetrics,
-    NewsItem,
+from domain.models.news import NewsItem
+from domain.models.stock import ChartSeries, FinancialMetrics, StockInfo
+from domain.models.technical import (
     RSIResult,
     SMAResult,
-    StockInfo,
     TechnicalIndicatorData,
     TechnicalSignal,
 )

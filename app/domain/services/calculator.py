@@ -1,8 +1,12 @@
-"""Calculadora de métricas financieras — lógica pura sin dependencias de UI."""
+"""Financial calculator service — pure domain logic."""
+
+from __future__ import annotations
+
+import math
 
 import pandas as pd
 
-from models import FinancialMetrics
+from domain.models import FinancialMetrics
 
 
 class FinancialCalculator:
@@ -17,8 +21,6 @@ class FinancialCalculator:
     @staticmethod
     def _calc_growth(series: pd.Series) -> list[float]:
         """Calculate YoY growth. Series is ordered most-recent-first."""
-        import math
-
         values = series.values
         growth = []
         for i in range(len(values)):
@@ -27,9 +29,9 @@ class FinancialCalculator:
                 if math.isfinite(curr) and math.isfinite(prev) and prev != 0:
                     growth.append(((curr - prev) / abs(prev)) * 100)
                 else:
-                    growth.append(0)
+                    growth.append(0.0)
             else:
-                growth.append(0)
+                growth.append(0.0)
         return growth
 
     @staticmethod

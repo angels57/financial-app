@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from models.financial_data import ChartSeries, FinancialMetrics, NewsItem, StockInfo
+from models import ChartSeries, FinancialMetrics, NewsItem, StockInfo
 
 
 class TestStockInfo:
