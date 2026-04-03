@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from models import FinancialMetrics
-from services.protocols import StockDataFetcherProtocol
+from domain.services.protocols import StockDataFetcherProtocol
 from ui.base_tab import BaseTab
 from ui.components import render_diff_badge
 from utils import (

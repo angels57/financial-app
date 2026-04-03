@@ -6,7 +6,7 @@ import logging
 from typing import TypedDict
 
 from models import FinancialMetrics, StockInfo
-from services.protocols import StockDataFetcherProtocol
+from domain.services.protocols import StockDataFetcherProtocol
 
 
 class RenderKwargs(TypedDict, total=False):

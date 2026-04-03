@@ -1,10 +1,13 @@
+"""Main application entry point."""
+
 import streamlit as st
 
 from config import settings
 from core import get_app_logger, init_monitoring
 from db import get_pool, init_db
 from db.cache_repo import CacheRepository
-from services import DataAggregator, FinancialCalculator
+from domain.services import FinancialCalculator
+from infrastructure.yfinance import YFinanceClient
 from ui import (
     FinancialsTab,
     NewsTab,
@@ -26,7 +29,7 @@ def _init_database() -> CacheRepository | None:
     return CacheRepository(pool)
 
 
-def main():
+def main() -> None:
     st.set_page_config(
         page_title="Financial Stre", layout="wide", initial_sidebar_state="expanded"
     )
@@ -43,13 +46,11 @@ def main():
         )
         return
 
-    force_refresh = st.session_state.pop("force_refresh", False)
-
     with st.spinner(f"Cargando datos de {ticker}..."):
         try:
-            stock_service = DataAggregator(ticker, cache_repo=cache_repo)
+            stock_service = YFinanceClient(ticker)
             calculator = FinancialCalculator()
-            info = stock_service.get_info(force_refresh=force_refresh)
+            info = stock_service.get_info()
 
             if info.price is None:
                 st.error(f"No se pudo encontrar el precio para: {ticker}")
@@ -58,9 +59,9 @@ def main():
             st.title(f"{info.short_name} ({ticker})")
 
             metrics = calculator.compute(
-                financials=stock_service.get_financials(force_refresh=force_refresh),
-                balance=stock_service.get_balance_sheet(force_refresh=force_refresh),
-                cashflow=stock_service.get_cashflow(force_refresh=force_refresh),
+                financials=stock_service.get_financials(),
+                balance=stock_service.get_balance_sheet(),
+                cashflow=stock_service.get_cashflow(),
                 pe_ratio=info.pe_ratio,
             )
 

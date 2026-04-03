@@ -7,7 +7,7 @@ import streamlit as st
 from plotly.subplots import make_subplots
 
 from models import StockInfo
-from services.protocols import StockDataFetcherProtocol
+from domain.services.protocols import StockDataFetcherProtocol
 from ui.base_tab import BaseTab
 from utils import format_large_number
 

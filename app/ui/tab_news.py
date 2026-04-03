@@ -7,7 +7,7 @@ from typing import Any
 
 import streamlit as st
 
-from services.protocols import StockDataFetcherProtocol
+from domain.services.protocols import StockDataFetcherProtocol
 from ui.base_tab import BaseTab
 
 

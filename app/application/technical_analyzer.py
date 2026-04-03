@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from services.yfinance_technical_service import YfinanceTechnicalService
+from infrastructure.yfinance.yfinance_technical_service import YfinanceTechnicalService
 
 
 class TechnicalAnalyzer:

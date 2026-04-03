@@ -10,7 +10,7 @@ import streamlit as st
 from plotly.subplots import make_subplots
 
 from models import StockInfo
-from services.protocols import (
+from domain.services.protocols import (
     StockDataServiceProtocol,
     TechnicalIndicatorFetcherProtocol,
 )
