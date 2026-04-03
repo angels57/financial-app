@@ -61,24 +61,32 @@ class YFinanceMapper:
         """Convert yfinance news to NewsItem domain models."""
         items = []
         for item in yf_news:
+            content = item.get("content", {})
             thumbnail = ""
-            if "thumbnail" in item:
-                res = item["thumbnail"].get("resolutions", [])
+            thumb = content.get("thumbnail")
+            if thumb:
+                res = thumb.get("resolutions", [])
                 if res:
                     thumbnail = res[-1].get("url", "")
 
-            title = item.get("title", "")
-            link = item.get("link", "")
+            title = content.get("title", "")
+            link = content.get("canonicalUrl", {}).get("url", "") or content.get(
+                "clickThroughUrl", {}
+            ).get("url", "")
             if not title or not link:
                 continue
+
+            publisher = content.get("provider", {}).get(
+                "displayName", "Fuente desconocida"
+            )
 
             items.append(
                 NewsItem(
                     title=title,
                     link=link,
-                    publisher=item.get("publisher", "Fuente desconocida"),
+                    publisher=publisher,
                     thumbnail=thumbnail,
-                    published_at=item.get("providerPublishTime", ""),
+                    published_at=content.get("pubDate", ""),
                 )
             )
         return items

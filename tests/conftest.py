@@ -221,11 +221,13 @@ def mock_yf_ticker() -> MagicMock:
     )
     mock.news = [
         {
-            "title": "Apple reports record earnings",
-            "link": "https://example.com/news/1",
-            "publisher": "Reuters",
-            "providerPublishTime": "2024-12-15T10:00:00Z",
-            "thumbnail": {"resolutions": [{"url": "https://example.com/img.jpg"}]},
+            "content": {
+                "title": "Apple reports record earnings",
+                "canonicalUrl": {"url": "https://example.com/news/1"},
+                "provider": {"displayName": "Reuters"},
+                "pubDate": "2024-12-15T10:00:00Z",
+                "thumbnail": {"resolutions": [{"url": "https://example.com/img.jpg"}]},
+            }
         }
     ]
     return mock

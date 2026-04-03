@@ -86,6 +86,7 @@ class YfinanceTechnicalService:
 
             rs = avg_gain / avg_loss
             rs = rs.replace([float("inf"), -float("inf")], float("nan"))
+            rs = rs.fillna(float("inf"))
             rsi = 100 - (100 / (1 + rs))
 
             result: dict[str, float] = {}

@@ -65,15 +65,15 @@ class TestRenderInputs:
 
     def test_extracts_beneficios_in_millions(self, prices_tab, sample_stock_info):
         inputs = prices_tab._render_inputs(sample_stock_info, "AAPL")
-        assert inputs[3] == 97_000_000_000 / 1e6
+        assert inputs[3] == 97_000_000_000 / 1e9
 
     def test_extracts_ventas_in_millions(self, prices_tab, sample_stock_info):
         inputs = prices_tab._render_inputs(sample_stock_info, "AAPL")
-        assert inputs[4] == 394_000_000_000 / 1e6
+        assert inputs[4] == 394_000_000_000 / 1e9
 
     def test_extracts_fcf_in_millions(self, prices_tab, sample_stock_info):
         inputs = prices_tab._render_inputs(sample_stock_info, "AAPL")
-        assert inputs[5] == 100_000_000_000 / 1e6
+        assert inputs[5] == 100_000_000_000 / 1e9
 
     def test_handles_none_pe_ratio(self, prices_tab):
         info = StockInfo(

@@ -166,6 +166,7 @@ class YFinanceClient:
             df.index = pd.to_datetime(df.index)
             df["Year"] = df.index.year
             annual = df.groupby("Year")["Dividend"].sum()
+            annual = annual.sort_index(ascending=False)
             return annual.to_frame()
         except (YFException, KeyError, ValueError):
             return None

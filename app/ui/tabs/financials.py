@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -337,15 +339,17 @@ class FinancialsTab(BaseTab):
             st.info("Datos de dividendos no disponibles.")
             return
 
+        current_year = datetime.now().year
+        div_df = div_df[div_df.index < current_year]
         years = [str(idx) for idx in div_df.index]
         dividends = div_df["Dividend"].tolist()
 
         div_growth = calculate_yoy_growth(dividends)
 
         fig = draw_plotly_dual_axis_chart(
-            bar_values=dividends[-10:],
-            line_values=div_growth[-10:],
-            labels=years[-10:],
+            bar_values=dividends[:10],
+            line_values=div_growth[:10],
+            labels=years[:10],
             title="Dividendos por Acción",
             bar_label="Dividendo ($)",
             line_label="Crecimiento (%)",

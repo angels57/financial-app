@@ -51,9 +51,9 @@ class PricesTab(BaseTab):
         per_default = float(info.pe_ratio or 0)
         ps_default = float(info.price_to_sales or 0)
         pfcf_default = float(info.price_to_fcf or 0)
-        beneficios_default = float((info.net_income or 0) / 1e6)
-        ventas_default = float((info.total_revenue or 0) / 1e6)
-        fcf_default = float((info.free_cash_flow or 0) / 1e6)
+        beneficios_default = float((info.net_income or 0) / 1e9)
+        ventas_default = float((info.total_revenue or 0) / 1e9)
+        fcf_default = float((info.free_cash_flow or 0) / 1e9)
 
         return (
             per_default,
@@ -77,9 +77,9 @@ class PricesTab(BaseTab):
     ) -> float:
         st.subheader("Precios de Compra según Ratios")
 
-        shares_default = float((info.shares_outstanding or 0) / 1e6)
+        shares_default = float((info.shares_outstanding or 0) / 1e9)
         shares = st.number_input(
-            "Acciones en circulación (M)",
+            "Acciones en circulación (B)",
             value=shares_default,
             min_value=0.0,
             format="%.2f",
@@ -99,7 +99,7 @@ class PricesTab(BaseTab):
                     key=f"per_{t}",
                 )
                 beneficios = st.number_input(
-                    "Beneficios (M)",
+                    "Beneficios (B)",
                     value=beneficios_default,
                     format="%.2f",
                     key=f"beneficios_{t}",
@@ -116,7 +116,7 @@ class PricesTab(BaseTab):
                     r"\frac{\text{Beneficios}}{\text{Acciones}} \times \text{PER promedio}"
                 )
                 st.caption(
-                    f"({beneficios:.2f}M / {shares:.2f}M) × {per:.2f} = ${precio_per:,.2f}"
+                    f"({beneficios:.2f}B / {shares:.2f}B) × {per:.2f} = ${precio_per:,.2f}"
                 )
 
         with col2:
@@ -130,7 +130,7 @@ class PricesTab(BaseTab):
                     key=f"ps_{t}",
                 )
                 ventas = st.number_input(
-                    "Ventas (M)",
+                    "Ventas (B)",
                     value=ventas_default,
                     min_value=0.0,
                     format="%.2f",
@@ -146,7 +146,7 @@ class PricesTab(BaseTab):
                     r"\frac{\text{Ventas}}{\text{Acciones}} \times \text{P/S promedio}"
                 )
                 st.caption(
-                    f"({ventas:.2f}M / {shares:.2f}M) × {ps:.2f} = ${precio_ps:,.2f}"
+                    f"({ventas:.2f}B / {shares:.2f}B) × {ps:.2f} = ${precio_ps:,.2f}"
                 )
 
         with col3:
@@ -160,7 +160,7 @@ class PricesTab(BaseTab):
                     key=f"pfcf_{t}",
                 )
                 fcf = st.number_input(
-                    "Flujo de Caja (M)",
+                    "Flujo de Caja (B)",
                     value=fcf_default,
                     format="%.2f",
                     key=f"fcf_{t}",
@@ -175,7 +175,7 @@ class PricesTab(BaseTab):
                     r"\frac{\text{FCF}}{\text{Acciones}} \times \text{P/FCF promedio}"
                 )
                 st.caption(
-                    f"({fcf:.2f}M / {shares:.2f}M) × {pfcf:.2f} = ${precio_fcf:,.2f}"
+                    f"({fcf:.2f}B / {shares:.2f}B) × {pfcf:.2f} = ${precio_fcf:,.2f}"
                 )
 
         with col4:

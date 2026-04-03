@@ -2,12 +2,7 @@ from typing import Optional
 
 import plotly.graph_objects as go
 
-from ui.theme import (
-    COLOR_GROWTH_NEGATIVE,
-    COLOR_GROWTH_POSITIVE,
-    COLOR_NEUTRAL,
-    COLOR_PRICE_LINE,
-)
+_DEFAULT_COLORS = ["#1f77b4", "#2ca02c", "#ff7f0e", "#d62728", "#9467bd"]
 
 
 def calculate_yoy_growth(values: list[float]) -> list[float]:
@@ -61,10 +56,10 @@ def draw_plotly_grouped_bar_chart(
 
     fig = go.Figure()
     default_colors = [
-        COLOR_PRICE_LINE,
-        COLOR_GROWTH_POSITIVE,
-        COLOR_NEUTRAL,
-        COLOR_GROWTH_NEGATIVE,
+        "#1f77b4",
+        "#2ca02c",
+        "#ff7f0e",
+        "#d62728",
         "#9467bd",
     ]
 
@@ -117,14 +112,12 @@ def draw_plotly_bar_chart(
     labels: list,
     title: str,
     ylabel: str,
-    color: str = COLOR_PRICE_LINE,
+    color: str = "#1f77b4",
     is_percent: bool = False,
     signed: bool = False,
 ) -> go.Figure:
     if signed:
-        colors = [
-            COLOR_GROWTH_POSITIVE if v >= 0 else COLOR_GROWTH_NEGATIVE for v in values
-        ]
+        colors = ["#2ca02c" if v >= 0 else "#d62728" for v in values]
     else:
         colors = [color] * len(values)
 
@@ -196,7 +189,7 @@ def draw_plotly_multi_line_chart(
     )
 
     if is_percent:
-        fig.update_yaxes(tickformat=".1f%")
+        fig.update_yaxes(ticksuffix="%")
 
     fig.update_xaxes(gridcolor="rgba(0,0,0,0.1)")
     fig.update_yaxes(gridcolor="rgba(0,0,0,0.1)")
@@ -211,8 +204,8 @@ def draw_plotly_dual_axis_chart(
     title: str,
     bar_label: str,
     line_label: str,
-    bar_color: str = COLOR_PRICE_LINE,
-    line_color: str = COLOR_GROWTH_POSITIVE,
+    bar_color: str = "#1f77b4",
+    line_color: str = "#2ca02c",
 ) -> go.Figure:
     fig = go.Figure()
 
