@@ -54,6 +54,7 @@ class FinancialMetrics(BaseModel):
     fcf_billions: list[float] = Field(default_factory=list)
     debt_billions: list[float] = Field(default_factory=list)
     debt_equity: list[float] = Field(default_factory=list)
+    eps: list[float] = Field(default_factory=list)
     pe_ratio: float | None = None
 
     def to_summary_chart_data(self) -> dict[str, ChartSeries]:
@@ -97,4 +98,5 @@ class FinancialMetrics(BaseModel):
         _safe(self.net_margin, "Net Margin", True)
         _safe(self.fcf_billions, "FCF", False)
         _safe(self.debt_equity, "Debt/Equity", True)
+        _safe(self.eps, "EPS", False)
         return deltas

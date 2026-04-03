@@ -86,6 +86,10 @@ class FinancialCalculator:
             fcf = cashflow.loc["Free Cash Flow"].iloc[:n_years]
             metrics.fcf_billions = list((fcf.values / 1e9).tolist())
 
+        if has_net_income and financials is not None:
+            ni = financials.loc["Net Income"].iloc[:n_years]
+            metrics.eps = list((ni.values / 1e9).tolist())
+
         if has_debt and balance is not None:
             debt = balance.loc["Total Debt"].iloc[:n_years]
             metrics.debt_billions = list((debt.values / 1e9).tolist())

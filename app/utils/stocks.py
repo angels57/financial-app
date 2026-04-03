@@ -115,6 +115,7 @@ def draw_plotly_bar_chart(
     color: str = "#1f77b4",
     is_percent: bool = False,
     signed: bool = False,
+    value_suffix: str = "B",
 ) -> go.Figure:
     if signed:
         colors = ["#2ca02c" if v >= 0 else "#d62728" for v in values]
@@ -127,7 +128,7 @@ def draw_plotly_bar_chart(
             x=labels,
             y=values,
             marker_color=colors,
-            text=[f"{v:+.1f}{'%' if is_percent else 'B'}" for v in values],
+            text=[f"{v:+.1f}{value_suffix}" for v in values],
             textposition="outside",
         )
     )

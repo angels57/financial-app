@@ -36,6 +36,7 @@ METRIC_COLORS = {
     "Net Income": COLOR_GROWTH_POSITIVE,
     "FCF": COLOR_NEUTRAL,
     "Debt": COLOR_GROWTH_NEGATIVE,
+    "EPS": COLOR_GROWTH_POSITIVE,
     "Ratios": "#9467bd",
 }
 
@@ -91,7 +92,20 @@ CHART_INSIGHTS = {
         "Si las acciones suben año tras año, la empresa está diluyendo a los accionistas, "
         "a menudo para financiar compensaciones o adquisiciones."
     ),
+    "eps": (
+        "**EPS (Earnings Per Share)** es el beneficio neto por acción. Es la métrica más directa "
+        "de rentabilidad para el accionista. Un EPS creciente indica que la empresa genera "
+        "más beneficios por cada acción, ya sea por mayor rentabilidad o por recompras de acciones."
+    ),
 }
+
+
+def _cagr_badges(
+    cagr: float | None, n_years: int, label: str
+) -> list[tuple[float, str]]:
+    if cagr is None:
+        return []
+    return [(cagr, f"{label} {n_years}a")]
 
 
 class FinancialsTab(BaseTab):
@@ -113,6 +127,7 @@ class FinancialsTab(BaseTab):
 
     def _render_kpi_cards(self, metrics: FinancialMetrics) -> None:
         deltas = metrics.yoy_deltas()
+        n = len(metrics.years)
 
         rev_cagr = calculate_cagr(metrics.revenue_billions)
         ni_cagr = calculate_cagr(metrics.net_income_billions)
@@ -120,14 +135,14 @@ class FinancialsTab(BaseTab):
 
         cols = st.columns(4)
 
-        kpi_config = [
-            ("Revenue", "${val:.2f}B", False, rev_cagr),
-            ("Net Margin", "{val:.1f}%", False, None),
-            ("FCF", "${val:.2f}B", False, fcf_cagr),
-            ("Debt/Equity", "{val:.1f}%", True, None),
+        kpi_config: list[tuple[str, str, bool, list[tuple[float, str]]]] = [
+            ("Revenue", "${val:.2f}B", False, _cagr_badges(rev_cagr, n, "CAGR")),
+            ("Net Margin", "{val:.1f}%", False, _cagr_badges(ni_cagr, n, "NI CAGR")),
+            ("FCF", "${val:.2f}B", False, _cagr_badges(fcf_cagr, n, "CAGR")),
+            ("Debt/Equity", "{val:.1f}%", True, []),
         ]
 
-        for col, (key, val_fmt, is_inverse, cagr) in zip(cols, kpi_config):
+        for col, (key, val_fmt, is_inverse, extra_badges) in zip(cols, kpi_config):
             with col:
                 with st.container(border=True):
                     if key in deltas:
@@ -139,14 +154,10 @@ class FinancialsTab(BaseTab):
                         if delta is not None and val is not None:
                             badge_delta = -delta if is_inverse else delta
                             render_diff_badge(badge_delta, label="var. YoY")
-                        if cagr is not None:
-                            render_diff_badge(cagr, label=f"CAGR {len(metrics.years)}a")
+                        for badge_val, badge_label in extra_badges:
+                            render_diff_badge(badge_val, label=badge_label)
                     else:
                         st.metric(key, "N/A")
-
-        if ni_cagr is not None:
-            with cols[1]:
-                render_diff_badge(ni_cagr, label=f"NI CAGR {len(metrics.years)}a")
 
     def _render_themed_tabs(
         self,
@@ -210,6 +221,7 @@ class FinancialsTab(BaseTab):
                     LABEL_CRECIMIENTO,
                     is_percent=True,
                     signed=True,
+                    value_suffix="%",
                     color=METRIC_COLORS["Ratios"],
                 )
                 st.plotly_chart(fig, width="stretch")
@@ -224,6 +236,7 @@ class FinancialsTab(BaseTab):
                     LABEL_MARGEN,
                     is_percent=True,
                     signed=True,
+                    value_suffix="%",
                     color=METRIC_COLORS["Net Income"],
                 )
                 st.plotly_chart(fig, width="stretch")
@@ -318,6 +331,7 @@ class FinancialsTab(BaseTab):
                     "ROE (%)",
                     is_percent=True,
                     signed=True,
+                    value_suffix="%",
                     color=METRIC_COLORS["Ratios"],
                 )
                 st.plotly_chart(fig, width="stretch")
@@ -330,6 +344,7 @@ class FinancialsTab(BaseTab):
             self._render_dividends_chart(stock_service)
         with col2:
             self._render_shares_chart(stock_service)
+        self._render_eps_chart(stock_service)
 
     def _render_dividends_chart(self, stock_service: StockDataFetcherProtocol) -> None:
         div_df = stock_service.get_dividends()
@@ -398,6 +413,28 @@ class FinancialsTab(BaseTab):
         st.plotly_chart(fig, width="stretch")
         with st.expander("¿Cómo leer este gráfico?"):
             st.markdown(CHART_INSIGHTS["shares"])
+
+    def _render_eps_chart(self, stock_service: StockDataFetcherProtocol) -> None:
+        fin_df = stock_service.get_financials()
+        if fin_df is None or "Diluted EPS" not in fin_df.index:
+            st.info("Datos de EPS no disponibles.")
+            return
+
+        eps_series = fin_df.loc["Diluted EPS"]
+        years = [str(c)[:4] for c in fin_df.columns]
+        eps_values = eps_series.tolist()
+
+        fig = draw_plotly_bar_chart(
+            eps_values[-10:],
+            years[-10:],
+            "EPS — Beneficio por Acción ($/acción)",
+            "EPS ($/acción)",
+            value_suffix="",
+            color=METRIC_COLORS["EPS"],
+        )
+        st.plotly_chart(fig, width="stretch")
+        with st.expander("¿Cómo leer este gráfico?"):
+            st.markdown(CHART_INSIGHTS["eps"])
 
     # -- Tabla de datos -------------------------------------------------------
 

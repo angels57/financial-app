@@ -6,18 +6,19 @@ import streamlit as st
 
 
 def render_diff_badge(diff: float, label: str = "upside") -> None:
-    """
-    Renderiza una etiqueta de diferencia con colores.
-
-    Verde: diff > 0 (precio necesita subir para alcanzar fair value = oportunidad)
-    Rojo: diff < 0 (precio está por encima del fair value = sobrevalorado)
-
-    Args:
-        diff: Porcentaje de diferencia (upside o downside)
-        label: Etiqueta a mostrar (default: "upside")
-    """
-    color = "green" if diff > 0 else "red"
+    """Renderiza una etiqueta de diferencia con colores y fondo."""
+    if diff > 0:
+        color = "#1e7e34"
+        bg = "#e6f4ea"
+    elif diff < 0:
+        color = "#c0392b"
+        bg = "#fce8e6"
+    else:
+        color = "#5f6368"
+        bg = "#f1f3f4"
     st.markdown(
-        f'<span style="color:{color}; font-size:0.9em;">{label}: {diff:+.1f}%</span>',
+        f'<span style="color:{color}; background:{bg}; font-size:0.78em; '
+        f'padding:2px 8px; border-radius:4px; font-weight:500;">'
+        f"{label}: {diff:+.1f}%</span>",
         unsafe_allow_html=True,
     )
