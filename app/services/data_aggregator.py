@@ -12,6 +12,7 @@ from config import settings
 from db.cache_repo import CacheRepository
 from models import NewsItem, StockInfo
 from services.stock_service import StockService
+from services.yfinance_technical_service import YfinanceTechnicalService
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,16 @@ class DataAggregator:
         self._yf = StockService(ticker)
         self._cache = cache_repo
         self._av_service = self._init_alpha_vantage()
+        self._yf_tech = YfinanceTechnicalService()
+        self._tech_source = "yfinance"
+
+    def set_technical_source(self, source: str) -> None:
+        """Establece la fuente de indicadores técnicos.
+
+        Args:
+            source: "yfinance" o "alphavantage"
+        """
+        self._tech_source = source
 
     @property
     def ticker(self) -> str:
@@ -120,10 +131,15 @@ class DataAggregator:
             self._cache.upsert_news(self._ticker_symbol, news, source="yfinance")
         return news
 
-    # -- Technical Indicators ---------------------------------------------------
+    # -- Technical Indicators (routing by source) --------------------------------
 
     _SMA_TTL = 14400
     _RSI_TTL = 3600
+
+    _INTERVAL_TO_PERIOD = {
+        "daily": "1y",
+        "weekly": "5y",
+    }
 
     def get_sma(
         self,
@@ -131,42 +147,10 @@ class DataAggregator:
         interval: str = "daily",
         force_refresh: bool = False,
     ) -> dict[str, float] | None:
-        if self._av_service is None:
-            logger.warning(
-                "[%s] Alpha Vantage no disponible para SMA", self._ticker_symbol
-            )
-            return None
-        if self._cache and not force_refresh:
-            cached = self._cache.get_technical_indicator(
-                self._ticker_symbol, "SMA", interval, time_period, self._SMA_TTL
-            )
-            if cached is not None:
-                logger.info(
-                    "[%s] SMA (%s, %d) obtenido desde cache",
-                    self._ticker_symbol,
-                    interval,
-                    time_period,
-                )
-                return cached
-        logger.info(
-            "[%s] Obteniendo SMA (%s, %d) desde Alpha Vantage...",
-            self._ticker_symbol,
-            interval,
-            time_period,
-        )
-        result = self._av_service.get_sma(self._ticker_symbol, interval, time_period)
-        if result is None:
-            return None
-        if self._cache:
-            self._cache.upsert_technical_indicator(
-                self._ticker_symbol,
-                "SMA",
-                interval,
-                time_period,
-                result.data,
-                source="alphavantage",
-            )
-        return result.data
+        if self._tech_source == "yfinance":
+            return self._get_sma_yfinance(time_period, interval, force_refresh)
+        else:
+            return self._get_sma_alphavantage(time_period, interval, force_refresh)
 
     def get_multiple_sma(
         self,
@@ -177,12 +161,10 @@ class DataAggregator:
         """Obtiene múltiples SMAs simultáneamente."""
         if periods is None:
             periods = [50, 100, 200]
-        results: dict[int, dict[str, float] | None] = {}
-        for period in periods:
-            results[period] = self.get_sma(
-                time_period=period, interval=interval, force_refresh=force_refresh
-            )
-        return results
+        if self._tech_source == "yfinance":
+            return self._get_multiple_sma_yfinance(periods, interval, force_refresh)
+        else:
+            return self._get_multiple_sma_alphavantage(periods, interval, force_refresh)
 
     def get_rsi(
         self,
@@ -190,23 +172,259 @@ class DataAggregator:
         interval: str = "daily",
         force_refresh: bool = False,
     ) -> dict[str, float] | None:
-        if self._av_service is None:
-            logger.warning(
-                "[%s] Alpha Vantage no disponible para RSI", self._ticker_symbol
-            )
-            return None
+        if self._tech_source == "yfinance":
+            return self._get_rsi_yfinance(time_period, interval, force_refresh)
+        else:
+            return self._get_rsi_alphavantage(time_period, interval, force_refresh)
+
+    # -- yfinance implementation -------------------------------------------------
+
+    def _get_sma_yfinance(
+        self, time_period: int, interval: str, force_refresh: bool
+    ) -> dict[str, float] | None:
+        period = self._INTERVAL_TO_PERIOD.get(interval, "1y")
+        indicator_key = "SMA_YF"
+
         if self._cache and not force_refresh:
             cached = self._cache.get_technical_indicator(
-                self._ticker_symbol, "RSI", interval, time_period, self._RSI_TTL
+                self._ticker_symbol, indicator_key, interval, time_period, self._SMA_TTL
             )
             if cached is not None:
                 logger.info(
-                    "[%s] RSI (%s, %d) obtenido desde cache",
+                    "[%s] SMA (%s, %d) desde cache yfinance",
                     self._ticker_symbol,
                     interval,
                     time_period,
                 )
                 return cached
+
+        logger.info(
+            "[%s] Calculando SMA (%s, %s) desde yfinance...",
+            self._ticker_symbol,
+            interval,
+            time_period,
+        )
+        result = self._yf_tech.get_sma(self._ticker_symbol, period, time_period)
+
+        if result and self._cache:
+            self._cache.upsert_technical_indicator(
+                self._ticker_symbol,
+                indicator_key,
+                interval,
+                time_period,
+                result,
+                source="yfinance",
+            )
+        return result
+
+    def _get_rsi_yfinance(
+        self, time_period: int, interval: str, force_refresh: bool
+    ) -> dict[str, float] | None:
+        period = self._INTERVAL_TO_PERIOD.get(interval, "1y")
+        indicator_key = "RSI_YF"
+
+        if self._cache and not force_refresh:
+            cached = self._cache.get_technical_indicator(
+                self._ticker_symbol, indicator_key, interval, time_period, self._RSI_TTL
+            )
+            if cached is not None:
+                logger.info(
+                    "[%s] RSI (%s, %d) desde cache yfinance",
+                    self._ticker_symbol,
+                    interval,
+                    time_period,
+                )
+                return cached
+
+        logger.info(
+            "[%s] Calculando RSI (%s, %s) desde yfinance...",
+            self._ticker_symbol,
+            interval,
+            time_period,
+        )
+        result = self._yf_tech.get_rsi(self._ticker_symbol, period, time_period)
+
+        if result and self._cache:
+            self._cache.upsert_technical_indicator(
+                self._ticker_symbol,
+                indicator_key,
+                interval,
+                time_period,
+                result,
+                source="yfinance",
+            )
+        return result
+
+    def _get_multiple_sma_yfinance(
+        self, periods: list[int], interval: str, force_refresh: bool
+    ) -> dict[int, dict[str, float] | None]:
+        period = self._INTERVAL_TO_PERIOD.get(interval, "1y")
+        indicator_key = "SMA_YF"
+
+        results: dict[int, dict[str, float] | None] = {}
+        cached_results: dict[int, dict[str, float] | None] = {}
+
+        if self._cache and not force_refresh:
+            for p in periods:
+                cached = self._cache.get_technical_indicator(
+                    self._ticker_symbol, indicator_key, interval, p, self._SMA_TTL
+                )
+                if cached is not None:
+                    cached_results[p] = cached
+                    logger.info(
+                        "[%s] SMA %d (%s) desde cache yfinance",
+                        self._ticker_symbol,
+                        p,
+                        interval,
+                    )
+            if len(cached_results) == len(periods):
+                return cached_results
+
+        logger.info(
+            "[%s] Calculando múltiples SMAs (%s) desde yfinance...",
+            self._ticker_symbol,
+            interval,
+        )
+        raw_results = self._yf_tech.get_multiple_sma(
+            self._ticker_symbol, period, periods
+        )
+
+        for p in periods:
+            if p in cached_results:
+                results[p] = cached_results[p]
+            else:
+                data = raw_results.get(p) if raw_results else None
+                results[p] = data
+                if data and self._cache:
+                    self._cache.upsert_technical_indicator(
+                        self._ticker_symbol,
+                        indicator_key,
+                        interval,
+                        p,
+                        data,
+                        source="yfinance",
+                    )
+
+        return results
+
+    def _get_multiple_sma_alphavantage(
+        self, periods: list[int], interval: str, force_refresh: bool
+    ) -> dict[int, dict[str, float] | None]:
+        if self._av_service is None:
+            logger.warning("[%s] Alpha Vantage no disponible", self._ticker_symbol)
+            return {p: None for p in periods}
+
+        indicator_key = "SMA_AV"
+        results: dict[int, dict[str, float] | None] = {}
+
+        for p in periods:
+            if self._cache and not force_refresh:
+                cached = self._cache.get_technical_indicator(
+                    self._ticker_symbol, indicator_key, interval, p, self._SMA_TTL
+                )
+                if cached is not None:
+                    logger.info(
+                        "[%s] SMA %d (%s) desde cache alphavantage",
+                        self._ticker_symbol,
+                        p,
+                        interval,
+                    )
+                    results[p] = cached
+                    continue
+
+            logger.info(
+                "[%s] Obteniendo SMA %d (%s) desde Alpha Vantage...",
+                self._ticker_symbol,
+                p,
+                interval,
+            )
+            result = self._av_service.get_sma(self._ticker_symbol, interval, p)
+            data = result.data if result else None
+            results[p] = data
+
+            if data and self._cache:
+                self._cache.upsert_technical_indicator(
+                    self._ticker_symbol,
+                    indicator_key,
+                    interval,
+                    p,
+                    data,
+                    source="alphavantage",
+                )
+
+        return results
+
+    # -- Alpha Vantage implementation -------------------------------------------
+
+    def _get_sma_alphavantage(
+        self, time_period: int, interval: str, force_refresh: bool
+    ) -> dict[str, float] | None:
+        if self._av_service is None:
+            logger.warning(
+                "[%s] Alpha Vantage no disponible para SMA", self._ticker_symbol
+            )
+            return None
+
+        indicator_key = "SMA_AV"
+
+        if self._cache and not force_refresh:
+            cached = self._cache.get_technical_indicator(
+                self._ticker_symbol, indicator_key, interval, time_period, self._SMA_TTL
+            )
+            if cached is not None:
+                logger.info(
+                    "[%s] SMA (%s, %d) desde cache alphavantage",
+                    self._ticker_symbol,
+                    interval,
+                    time_period,
+                )
+                return cached
+
+        logger.info(
+            "[%s] Obteniendo SMA (%s, %d) desde Alpha Vantage...",
+            self._ticker_symbol,
+            interval,
+            time_period,
+        )
+        result = self._av_service.get_sma(self._ticker_symbol, interval, time_period)
+        if result is None:
+            return None
+
+        if self._cache:
+            self._cache.upsert_technical_indicator(
+                self._ticker_symbol,
+                indicator_key,
+                interval,
+                time_period,
+                result.data,
+                source="alphavantage",
+            )
+        return result.data
+
+    def _get_rsi_alphavantage(
+        self, time_period: int, interval: str, force_refresh: bool
+    ) -> dict[str, float] | None:
+        if self._av_service is None:
+            logger.warning(
+                "[%s] Alpha Vantage no disponible para RSI", self._ticker_symbol
+            )
+            return None
+
+        indicator_key = "RSI_AV"
+
+        if self._cache and not force_refresh:
+            cached = self._cache.get_technical_indicator(
+                self._ticker_symbol, indicator_key, interval, time_period, self._RSI_TTL
+            )
+            if cached is not None:
+                logger.info(
+                    "[%s] RSI (%s, %d) desde cache alphavantage",
+                    self._ticker_symbol,
+                    interval,
+                    time_period,
+                )
+                return cached
+
         logger.info(
             "[%s] Obteniendo RSI (%s, %d) desde Alpha Vantage...",
             self._ticker_symbol,
@@ -216,10 +434,11 @@ class DataAggregator:
         result = self._av_service.get_rsi(self._ticker_symbol, interval, time_period)
         if result is None:
             return None
+
         if self._cache:
             self._cache.upsert_technical_indicator(
                 self._ticker_symbol,
-                "RSI",
+                indicator_key,
                 interval,
                 time_period,
                 result.data,

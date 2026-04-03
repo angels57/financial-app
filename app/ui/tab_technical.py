@@ -20,7 +20,23 @@ class TechnicalTab(BaseTab):
     def render(self, *, stock_service, info: StockInfo, period: str, **kwargs) -> None:
         st.subheader("Análisis Técnico")
 
-        col_int, col_periods = st.columns([1, 3])
+        if "tech_source" not in st.session_state:
+            st.session_state["tech_source"] = "yfinance"
+
+        col_source, col_int = st.columns([1, 1])
+        with col_source:
+            source_index = 0 if st.session_state["tech_source"] == "yfinance" else 1
+            st.selectbox(
+                "Fuente",
+                options=["yfinance", "Alpha Vantage"],
+                index=source_index,
+                key="tech_source_select",
+                on_change=lambda: setattr(
+                    st.session_state,
+                    "tech_source",
+                    st.session_state["tech_source_select"],
+                ),
+            )
         with col_int:
             interval = st.selectbox(
                 "Intervalo",
@@ -46,11 +62,20 @@ class TechnicalTab(BaseTab):
         if show_200:
             selected_periods.append(200)
 
+        current_source = st.session_state.get("tech_source", "yfinance")
+        if current_source == "yfinance":
+            st.caption("ℹ️ **yfinance**: Sin límite de requests • Cálculo local")
+        else:
+            st.caption("ℹ️ **Alpha Vantage**: Rate limited (25 requests/día)")
+
         st.markdown("---")
 
         if not selected_periods:
             st.warning("Selecciona al menos un período SMA.")
             return
+
+        if hasattr(stock_service, "set_technical_source"):
+            stock_service.set_technical_source(st.session_state["tech_source"])
 
         with st.spinner("Cargando indicadores..."):
             sma_data, rsi_data = self._fetch_indicator_data(

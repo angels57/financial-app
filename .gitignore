@@ -12,3 +12,6 @@ wheels/
 logs
 .ruff_cache
 .DS_Store
+.claude
+.mypy_cache
+.pytest_cache
