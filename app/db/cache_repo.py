@@ -162,7 +162,8 @@ class CacheRepository:
             ).fetchone()
         if row is None:
             return None
-        return [NewsItem.model_validate(item) for item in row[0]]
+        items = row[0]
+        return [NewsItem.model_validate(item) for item in items]
 
     def upsert_news(self, ticker: str, news: list[NewsItem], source: str) -> None:
         data = json.dumps([item.model_dump() for item in news])
