@@ -201,7 +201,7 @@ class CacheRepository:
         age = (datetime.now(timezone.utc) - fetched_at).total_seconds()
         if age > max_age_seconds:
             return None
-        return row[0]
+        return row[0]  # type: ignore[no-any-return]
 
     def upsert_technical_indicator(
         self,

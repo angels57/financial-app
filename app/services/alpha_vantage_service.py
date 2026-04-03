@@ -57,7 +57,7 @@ class AlphaVantageService:
                     data.get("Error Message") or data.get("Note"),
                 )
                 return None
-            return data
+            return data  # type: ignore[no-any-return]
         except Exception:
             logger.exception("Alpha Vantage request failed")
             return None

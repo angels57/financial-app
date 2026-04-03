@@ -36,7 +36,7 @@ class FinancialCalculator:
     def _calc_ratio(numerator: pd.Series, denominator: pd.Series) -> list[float] | None:
         if len(numerator) != len(denominator):
             return None
-        return ((numerator.values / denominator.values) * 100).tolist()
+        return list[float](((numerator.values / denominator.values) * 100).tolist())
 
     def compute(
         self,
@@ -55,20 +55,23 @@ class FinancialCalculator:
         has_fcf = cashflow is not None and "Free Cash Flow" in cashflow.index
 
         if has_revenue:
+            assert financials is not None
             rev = financials.loc["Total Revenue"].iloc[:limit]
             metrics.years = self._extract_years(rev)
-            metrics.revenue_billions = (rev.values / 1e9).tolist()
+            metrics.revenue_billions = list[float]((rev.values / 1e9).tolist())
             metrics.sales_growth = self._calc_growth(rev)
 
         n_years = len(metrics.years)
 
         if has_revenue and has_net_income:
+            assert financials is not None
             rev = financials.loc["Total Revenue"].iloc[:n_years]
             ni = financials.loc["Net Income"].iloc[:n_years]
-            metrics.net_income_billions = (ni.values / 1e9).tolist()
-            metrics.net_margin = ((ni.values / rev.values) * 100).tolist()
+            metrics.net_income_billions = list[float]((ni.values / 1e9).tolist())
+            metrics.net_margin = list[float](((ni.values / rev.values) * 100).tolist())
 
         if has_net_income and has_equity:
+            assert financials is not None and balance is not None
             ni = financials.loc["Net Income"].iloc[:n_years]
             equity = balance.loc["Stockholders Equity"].iloc[:n_years]
             roe = self._calc_ratio(ni, equity)
@@ -76,12 +79,14 @@ class FinancialCalculator:
                 metrics.roe = roe
 
         if has_fcf:
+            assert cashflow is not None
             fcf = cashflow.loc["Free Cash Flow"].iloc[:n_years]
-            metrics.fcf_billions = (fcf.values / 1e9).tolist()
+            metrics.fcf_billions = list[float]((fcf.values / 1e9).tolist())
 
         if has_debt:
+            assert balance is not None
             debt = balance.loc["Total Debt"].iloc[:n_years]
-            metrics.debt_billions = (debt.values / 1e9).tolist()
+            metrics.debt_billions = list[float]((debt.values / 1e9).tolist())
 
             if has_equity:
                 equity = balance.loc["Stockholders Equity"].iloc[:n_years]

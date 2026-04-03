@@ -4,7 +4,10 @@ Drop-in replacement for StockService. Exposes the same method signatures
 so all UI tabs work without changes.
 """
 
+from __future__ import annotations
+
 import logging
+from typing import Callable
 
 import pandas as pd
 
@@ -64,7 +67,7 @@ class DataAggregator:
             cached = self._cache.get_stock_info(self._ticker_symbol)
             if cached is not None:
                 logger.info("[%s] Info obtenida desde cache", self._ticker_symbol)
-                return cached
+                return cached  # type: ignore[no-any-return]
 
         logger.info("[%s] Obteniendo info desde yfinance...", self._ticker_symbol)
         yf_info = self._yf.get_info()
@@ -88,7 +91,7 @@ class DataAggregator:
                     self._ticker_symbol,
                     period,
                 )
-                return cached
+                return cached  # type: ignore[no-any-return]
 
         logger.info(
             "[%s] Obteniendo precios (%s) desde yfinance...",
@@ -122,14 +125,14 @@ class DataAggregator:
             cached = self._cache.get_news(self._ticker_symbol)
             if cached is not None:
                 logger.info("[%s] Noticias obtenidas desde cache", self._ticker_symbol)
-                return cached
+                return cached  # type: ignore[no-any-return]
 
         logger.info("[%s] Obteniendo noticias desde yfinance...", self._ticker_symbol)
         news = self._yf.get_news()
 
         if self._cache and news:
             self._cache.upsert_news(self._ticker_symbol, news, source="yfinance")
-        return news
+        return news  # type: ignore[no-any-return]
 
     # -- Technical Indicators (routing by source) --------------------------------
 
@@ -196,7 +199,7 @@ class DataAggregator:
                     interval,
                     time_period,
                 )
-                return cached
+                return cached  # type: ignore[no-any-return]
 
         logger.info(
             "[%s] Calculando SMA (%s, %s) desde yfinance...",
@@ -215,7 +218,7 @@ class DataAggregator:
                 result,
                 source="yfinance",
             )
-        return result
+        return result  # type: ignore[no-any-return]
 
     def _get_rsi_yfinance(
         self, time_period: int, interval: str, force_refresh: bool
@@ -234,7 +237,7 @@ class DataAggregator:
                     interval,
                     time_period,
                 )
-                return cached
+                return cached  # type: ignore[no-any-return]
 
         logger.info(
             "[%s] Calculando RSI (%s, %s) desde yfinance...",
@@ -253,7 +256,7 @@ class DataAggregator:
                 result,
                 source="yfinance",
             )
-        return result
+        return result  # type: ignore[no-any-return]
 
     def _get_multiple_sma_yfinance(
         self, periods: list[int], interval: str, force_refresh: bool
@@ -278,7 +281,7 @@ class DataAggregator:
                         interval,
                     )
             if len(cached_results) == len(periods):
-                return cached_results
+                return cached_results  # type: ignore[no-any-return]
 
         logger.info(
             "[%s] Calculando múltiples SMAs (%s) desde yfinance...",
@@ -378,7 +381,7 @@ class DataAggregator:
                     interval,
                     time_period,
                 )
-                return cached
+                return cached  # type: ignore[no-any-return]
 
         logger.info(
             "[%s] Obteniendo SMA (%s, %d) desde Alpha Vantage...",
@@ -399,7 +402,7 @@ class DataAggregator:
                 result.data,
                 source="alphavantage",
             )
-        return result.data
+        return result.data  # type: ignore[no-any-return]
 
     def _get_rsi_alphavantage(
         self, time_period: int, interval: str, force_refresh: bool
@@ -423,7 +426,7 @@ class DataAggregator:
                     interval,
                     time_period,
                 )
-                return cached
+                return cached  # type: ignore[no-any-return]
 
         logger.info(
             "[%s] Obteniendo RSI (%s, %d) desde Alpha Vantage...",
@@ -444,14 +447,14 @@ class DataAggregator:
                 result.data,
                 source="alphavantage",
             )
-        return result.data
+        return result.data  # type: ignore[no-any-return]
 
     # -- Private helpers ------------------------------------------------------
 
     def _get_statement(
         self,
         statement: str,
-        yf_fetcher: callable,
+        yf_fetcher: Callable[[], pd.DataFrame | None],
         force_refresh: bool = False,
     ) -> pd.DataFrame | None:
         if self._cache and not force_refresh:
@@ -460,7 +463,7 @@ class DataAggregator:
                 logger.info(
                     "[%s] %s obtenido desde cache", self._ticker_symbol, statement
                 )
-                return cached
+                return cached  # type: ignore[no-any-return]
 
         logger.info(
             "[%s] Obteniendo %s desde yfinance...", self._ticker_symbol, statement

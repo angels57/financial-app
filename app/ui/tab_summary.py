@@ -1,11 +1,13 @@
 """Tab de resumen general."""
 
+from __future__ import annotations
+
 import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
 from models import StockInfo
-from services import StockService
+from services.protocols import StockDataFetcherProtocol
 from ui.base_tab import BaseTab
 from utils import format_large_number
 
@@ -14,7 +16,12 @@ class SummaryTab(BaseTab):
     """Renderiza el tab de resumen con precio, métricas y historial."""
 
     def render(
-        self, *, stock_service: StockService, info: StockInfo, period: str, **kwargs
+        self,
+        *,
+        stock_service: StockDataFetcherProtocol,
+        info: StockInfo,
+        period: str,
+        **kwargs: object,
     ) -> None:
         self._render_price_metrics(info)
         st.markdown("---")
@@ -148,7 +155,10 @@ class SummaryTab(BaseTab):
         )
 
     def _render_price_history(
-        self, stock_service: StockService, currency: str, period: str
+        self,
+        stock_service: StockDataFetcherProtocol,
+        currency: str,
+        period: str,
     ) -> None:
         st.subheader(f"Historial de Precios ({period})")
         hist = stock_service.get_history(period=period)

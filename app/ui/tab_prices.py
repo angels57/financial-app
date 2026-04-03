@@ -1,5 +1,9 @@
 """Tab de cálculo de precios de compra y futuros."""
 
+from __future__ import annotations
+
+from typing import Any
+
 import streamlit as st
 
 from models import StockInfo
@@ -11,7 +15,7 @@ from ui.components import render_diff_badge
 class PricesTab(BaseTab):
     """Calcula precios de compra y futuros según múltiplos financieros."""
 
-    def render(self, *, info: StockInfo, **kwargs) -> None:
+    def render(self, *, info: StockInfo, **kwargs: Any) -> None:
         t = info.ticker
         (
             per_default,
@@ -298,7 +302,7 @@ class PricesTab(BaseTab):
             st.session_state[f"future_avg_{t}"] = promedio
 
         _fragment()
-        return st.session_state.get(f"future_avg_{t}", 0.0)
+        return st.session_state.get(f"future_avg_{t}", 0.0)  # type: ignore[no-any-return]
 
     def _render_returns(
         self,

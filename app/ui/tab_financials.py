@@ -1,11 +1,13 @@
 """Tab de análisis financiero."""
 
+from __future__ import annotations
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
 from models import FinancialMetrics
-from services import StockService
+from services.protocols import StockDataFetcherProtocol
 from ui.base_tab import BaseTab
 from ui.components import render_diff_badge
 from utils import (
@@ -90,8 +92,8 @@ class FinancialsTab(BaseTab):
         *,
         ticker: str,
         metrics: FinancialMetrics,
-        stock_service: StockService,
-        **kwargs,
+        stock_service: StockDataFetcherProtocol,
+        **kwargs: object,
     ) -> None:
         self._render_kpi_cards(metrics)
         st.markdown("---")
@@ -151,7 +153,10 @@ class FinancialsTab(BaseTab):
             st.info("No hay suficientes datos para generar el resumen.")
 
     def _render_themed_tabs(
-        self, ticker: str, metrics: FinancialMetrics, stock_service: StockService
+        self,
+        ticker: str,
+        metrics: FinancialMetrics,
+        stock_service: StockDataFetcherProtocol,
     ) -> None:
         if not metrics.years:
             st.info("Datos financieros no disponibles.")
@@ -323,14 +328,14 @@ class FinancialsTab(BaseTab):
 
     # -- Tab 4: Retorno al Accionista -----------------------------------------
 
-    def _render_shareholder_tab(self, stock_service: StockService) -> None:
+    def _render_shareholder_tab(self, stock_service: StockDataFetcherProtocol) -> None:
         col1, col2 = st.columns(2)
         with col1:
             self._render_dividends_chart(stock_service)
         with col2:
             self._render_shares_chart(stock_service)
 
-    def _render_dividends_chart(self, stock_service: StockService) -> None:
+    def _render_dividends_chart(self, stock_service: StockDataFetcherProtocol) -> None:
         div_df = stock_service.get_dividends()
         info = stock_service.get_info()
 
@@ -371,7 +376,7 @@ class FinancialsTab(BaseTab):
                     f"${dividends[-1]:.2f}",
                 )
 
-    def _render_shares_chart(self, stock_service: StockService) -> None:
+    def _render_shares_chart(self, stock_service: StockDataFetcherProtocol) -> None:
         shares_df = stock_service.get_financials()
         if shares_df is None or "Diluted Average Shares" not in shares_df.index:
             st.info("Datos de acciones en circulación no disponibles.")
@@ -418,7 +423,7 @@ class FinancialsTab(BaseTab):
         ("Diluted EPS", "EPS Diluido", False),
     ]
 
-    def _render_data_table(self, stock_service: StockService) -> None:
+    def _render_data_table(self, stock_service: StockDataFetcherProtocol) -> None:
         st.subheader("Estado de Resultados")
         df = stock_service.get_financials()
         if df is None or df.empty:

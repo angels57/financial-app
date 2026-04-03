@@ -1,11 +1,19 @@
 """Tab de análisis técnico con SMA y RSI."""
 
+from __future__ import annotations
+
+from typing import Any
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
 from models import StockInfo
+from services.protocols import (
+    StockDataServiceProtocol,
+    TechnicalIndicatorFetcherProtocol,
+)
 from ui.base_tab import BaseTab
 
 
@@ -17,7 +25,14 @@ class TechnicalTab(BaseTab):
     SMA_WIDTHS = {50: 2.0, 100: 1.5, 200: 1.0}
     RSI_PERIOD = 14
 
-    def render(self, *, stock_service, info: StockInfo, period: str, **kwargs) -> None:
+    def render(
+        self,
+        *,
+        stock_service: StockDataServiceProtocol,
+        info: StockInfo,
+        period: str,
+        **kwargs: Any,
+    ) -> None:
         st.subheader("Análisis Técnico")
 
         if "tech_source" not in st.session_state:
@@ -100,7 +115,7 @@ class TechnicalTab(BaseTab):
 
     def _fetch_indicator_data(
         self,
-        stock_service,
+        stock_service: TechnicalIndicatorFetcherProtocol,
         interval: str,
         selected_periods: list[int],
     ) -> tuple[dict[int, dict[str, float] | None], dict[str, float] | None]:

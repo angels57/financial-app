@@ -1,5 +1,7 @@
 """Clase base abstracta para los tabs del dashboard."""
 
+from __future__ import annotations
+
 import logging
 from abc import ABC, abstractmethod
 
@@ -11,10 +13,10 @@ logger = logging.getLogger(__name__)
 class BaseTab(ABC):
     """Interfaz común para todos los tabs — Open/Closed principle."""
 
-    def __init__(self, title: str):
+    def __init__(self, title: str) -> None:
         self.title = title
 
-    def safe_render(self, **kwargs) -> None:
+    def safe_render(self, **kwargs: object) -> None:
         """Render with error boundary — prevents one tab from crashing the whole app."""
         try:
             self.render(**kwargs)
@@ -23,4 +25,4 @@ class BaseTab(ABC):
             logger.exception("Error rendering tab %s", self.title)
 
     @abstractmethod
-    def render(self, **kwargs) -> None: ...
+    def render(self, **kwargs: object) -> None: ...

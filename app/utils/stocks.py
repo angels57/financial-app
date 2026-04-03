@@ -39,7 +39,7 @@ def calculate_cagr(values: list[float]) -> float | None:
     # Most recent is first, oldest is last
     end, start = clean[0], clean[-1]
     n = len(clean) - 1
-    return ((end / start) ** (1 / n) - 1) * 100
+    return float(((end / start) ** (1 / n) - 1) * 100)
 
 
 def draw_plotly_grouped_bar_chart(
