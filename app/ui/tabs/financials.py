@@ -97,8 +97,6 @@ class FinancialsTab(BaseTab):
     ) -> None:
         self._render_kpi_cards(metrics)
         st.markdown("---")
-        self._render_summary_chart(ticker, metrics)
-        st.markdown("---")
         self._render_themed_tabs(ticker, metrics, stock_service)
         st.markdown("---")
         self._render_data_table(stock_service)
@@ -139,18 +137,6 @@ class FinancialsTab(BaseTab):
         if ni_cagr is not None:
             with cols[1]:
                 render_diff_badge(ni_cagr, label=f"NI CAGR {len(metrics.years)}a")
-
-    def _render_summary_chart(self, ticker: str, metrics: FinancialMetrics) -> None:
-        st.subheader("Resumen Financiero (5 Años)")
-        chart_data = metrics.to_summary_chart_data()
-        if chart_data:
-            data = {k: {"x": v.x, "y": v.y} for k, v in chart_data.items()}
-            fig = draw_plotly_multi_line_chart(
-                data, f"{ticker} - Resumen Financiero", "Valor"
-            )
-            st.plotly_chart(fig, width="stretch")
-        else:
-            st.info("No hay suficientes datos para generar el resumen.")
 
     def _render_themed_tabs(
         self,
