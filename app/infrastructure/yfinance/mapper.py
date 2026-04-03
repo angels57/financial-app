@@ -23,6 +23,9 @@ class YFinanceMapper:
         if shares is None:
             shares = yf_info.get("impliedSharesOutstanding")
 
+        tar = yf_info.get("trailingAnnualDividendRate", 0)
+        div_yield = tar / price if price and tar else None
+
         return StockInfo(
             ticker=ticker,
             short_name=yf_info.get("shortName", ticker),
@@ -40,7 +43,7 @@ class YFinanceMapper:
             website=yf_info.get("website", ""),
             description=yf_info.get("longBusinessSummary", ""),
             beta=yf_info.get("beta"),
-            dividend_yield=yf_info.get("dividendYield"),
+            dividend_yield=div_yield,
             eps=yf_info.get("trailingEps"),
             target_price=yf_info.get("targetMeanPrice"),
             recommendation=yf_info.get("recommendationKey", ""),
