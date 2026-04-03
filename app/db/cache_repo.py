@@ -157,8 +157,7 @@ class CacheRepository:
     def get_news(self, ticker: str) -> list[NewsItem] | None:
         with self._pool.connection() as conn:
             row = conn.execute(
-                "SELECT data_json FROM financial_statements_cache "
-                "WHERE ticker = %s AND statement = 'news'",
+                "SELECT data_json FROM news_cache WHERE ticker = %s",
                 (ticker,),
             ).fetchone()
         if row is None:
@@ -170,9 +169,9 @@ class CacheRepository:
         with self._pool.connection() as conn:
             conn.execute(
                 """
-                INSERT INTO financial_statements_cache (ticker, statement, source, data_json)
-                VALUES (%s, 'news', %s, %s::jsonb)
-                ON CONFLICT (ticker, statement) DO UPDATE
+                INSERT INTO news_cache (ticker, source, data_json)
+                VALUES (%s, %s, %s::jsonb)
+                ON CONFLICT (ticker) DO UPDATE
                 SET source = EXCLUDED.source,
                     data_json = EXCLUDED.data_json,
                     fetched_at = now()

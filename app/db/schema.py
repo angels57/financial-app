@@ -40,6 +40,14 @@ CREATE TABLE IF NOT EXISTS financial_statements_cache (
     PRIMARY KEY (ticker, statement)
 );
 
+CREATE TABLE IF NOT EXISTS news_cache (
+    ticker      TEXT NOT NULL REFERENCES consulted_companies(ticker) ON DELETE CASCADE,
+    source      TEXT NOT NULL,
+    data_json   JSONB NOT NULL,
+    fetched_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (ticker)
+);
+
 CREATE TABLE IF NOT EXISTS technical_indicators_cache (
     ticker       TEXT NOT NULL,
     indicator    TEXT NOT NULL,

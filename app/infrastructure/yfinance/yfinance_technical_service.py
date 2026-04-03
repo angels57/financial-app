@@ -3,24 +3,37 @@
 import pandas as pd
 import yfinance as yf
 
+_INTERVAL_MAP: dict[str, str] = {
+    "daily": "1d",
+    "weekly": "1wk",
+}
+
+# Enough history to compute the longest SMA (200) with margin.
+_LOOKBACK_PERIOD = "2y"
+
 
 class YfinanceTechnicalService:
     """Calcula SMA y RSI desde price history de yfinance sin usar API externa."""
 
     @staticmethod
-    def get_sma(ticker: str, period: str, time_period: int) -> dict[str, float] | None:
+    def get_sma(
+        ticker: str, interval: str, time_period: int
+    ) -> dict[str, float] | None:
         """Calcula Simple Moving Average.
 
         Args:
             ticker: Símbolo (ej. "AAPL")
-            period: Período yfinance (ej. "1y", "6mo", "2y")
+            interval: Granularidad de datos (ej. "daily", "weekly", "1d", "1wk")
             time_period: Período de la media móvil (50, 100, 200)
 
         Returns:
             Dict {fecha_str: valor_sma} o None si hay error
         """
         try:
-            hist = yf.Ticker(ticker).history(period=period)
+            yf_interval = _INTERVAL_MAP.get(interval, interval)
+            hist = yf.Ticker(ticker).history(
+                period=_LOOKBACK_PERIOD, interval=yf_interval
+            )
             if hist.empty or "Close" not in hist.columns:
                 return None
             sma = hist["Close"].rolling(window=time_period).mean()
@@ -34,20 +47,23 @@ class YfinanceTechnicalService:
 
     @staticmethod
     def get_rsi(
-        ticker: str, period: str, time_period: int = 14
+        ticker: str, interval: str, time_period: int = 14
     ) -> dict[str, float] | None:
         """Calcula Relative Strength Index (RSI).
 
         Args:
             ticker: Símbolo
-            period: Período yfinance
+            interval: Granularidad de datos (ej. "daily", "weekly", "1d", "1wk")
             time_period: Período RSI (default 14)
 
         Returns:
             Dict {fecha_str: valor_rsi} o None si hay error
         """
         try:
-            hist = yf.Ticker(ticker).history(period=period)
+            yf_interval = _INTERVAL_MAP.get(interval, interval)
+            hist = yf.Ticker(ticker).history(
+                period=_LOOKBACK_PERIOD, interval=yf_interval
+            )
             if hist.empty or "Close" not in hist.columns:
                 return None
 
@@ -71,13 +87,13 @@ class YfinanceTechnicalService:
             return None
 
     def get_multiple_sma(
-        self, ticker: str, period: str, periods: list[int]
+        self, ticker: str, interval: str, periods: list[int]
     ) -> dict[int, dict[str, float] | None]:
         """Calcula múltiples SMAs de una sola vez (más eficiente).
 
         Args:
             ticker: Símbolo
-            period: Período yfinance
+            interval: Granularidad de datos (ej. "daily", "weekly", "1d", "1wk")
             periods: Lista de períodos [50, 100, 200]
 
         Returns:
@@ -85,7 +101,10 @@ class YfinanceTechnicalService:
         """
         results: dict[int, dict[str, float] | None] = {}
         try:
-            hist = yf.Ticker(ticker).history(period=period)
+            yf_interval = _INTERVAL_MAP.get(interval, interval)
+            hist = yf.Ticker(ticker).history(
+                period=_LOOKBACK_PERIOD, interval=yf_interval
+            )
             if hist.empty or "Close" not in hist.columns:
                 for p in periods:
                     results[p] = None

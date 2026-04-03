@@ -46,11 +46,13 @@ def main() -> None:
         )
         return
 
+    force_refresh = st.session_state.pop("force_refresh", False)
+
     with st.spinner(f"Cargando datos de {ticker}..."):
         try:
-            stock_service = YFinanceClient(ticker)
+            stock_service = YFinanceClient(ticker, cache_repo=cache_repo)
             calculator = FinancialCalculator()
-            info = stock_service.get_info()
+            info = stock_service.get_info(force_refresh=force_refresh)
 
             if info.price is None:
                 st.error(f"No se pudo encontrar el precio para: {ticker}")
@@ -59,9 +61,9 @@ def main() -> None:
             st.title(f"{info.short_name} ({ticker})")
 
             metrics = calculator.compute(
-                financials=stock_service.get_financials(),
-                balance=stock_service.get_balance_sheet(),
-                cashflow=stock_service.get_cashflow(),
+                financials=stock_service.get_financials(force_refresh=force_refresh),
+                balance=stock_service.get_balance_sheet(force_refresh=force_refresh),
+                cashflow=stock_service.get_cashflow(force_refresh=force_refresh),
                 pe_ratio=info.pe_ratio,
             )
 
