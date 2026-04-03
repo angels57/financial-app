@@ -8,7 +8,7 @@ from typing import Any
 import streamlit as st
 
 from domain.services.protocols import StockDataFetcherProtocol
-from ui.base_tab import BaseTab
+from ui.tabs.base import BaseTab
 
 
 class NewsTab(BaseTab):

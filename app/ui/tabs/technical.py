@@ -14,7 +14,7 @@ from domain.services.protocols import (
     StockDataServiceProtocol,
     TechnicalIndicatorFetcherProtocol,
 )
-from ui.base_tab import BaseTab
+from ui.tabs.base import BaseTab
 
 
 class TechnicalTab(BaseTab):

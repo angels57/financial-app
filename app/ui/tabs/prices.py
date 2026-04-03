@@ -8,7 +8,7 @@ import streamlit as st
 
 from models import StockInfo
 from scrapers.guru_focus_scraper import GuruFocusScraper
-from ui.base_tab import BaseTab
+from ui.tabs.base import BaseTab
 from ui.components import render_diff_badge
 
 

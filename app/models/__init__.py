@@ -1,4 +1,4 @@
-"""Models package — re-exports from domain.models for backward compatibility."""
+"""Backward-compatibility re-exports from domain.models."""
 
 from domain.models import (
     ChartSeries,

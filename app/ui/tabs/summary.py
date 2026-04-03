@@ -8,7 +8,7 @@ from plotly.subplots import make_subplots
 
 from models import StockInfo
 from domain.services.protocols import StockDataFetcherProtocol
-from ui.base_tab import BaseTab
+from ui.tabs.base import BaseTab
 from utils import format_large_number
 
 

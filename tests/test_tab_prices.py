@@ -3,8 +3,8 @@
 import pytest
 
 from models import StockInfo
-from ui.base_tab import BaseTab
-from ui.tab_prices import PricesTab
+from ui.tabs.base import BaseTab
+from ui.tabs.prices import PricesTab
 
 
 @pytest.fixture

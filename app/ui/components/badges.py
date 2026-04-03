@@ -1,4 +1,6 @@
-"""Componentes UI reutilizables para el dashboard."""
+"""Badge components for displaying metric differences and indicators."""
+
+from __future__ import annotations
 
 import streamlit as st
 

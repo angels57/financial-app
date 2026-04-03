@@ -1,10 +1,14 @@
-from .base_tab import BaseTab
-from .sidebar import render_sidebar
-from .tab_financials import FinancialsTab
-from .tab_news import NewsTab
-from .tab_prices import PricesTab
-from .tab_summary import SummaryTab
-from .tab_technical import TechnicalTab
+"""User interface components for the dashboard."""
+
+from ui.sidebar import render_sidebar
+from ui.tabs import (
+    BaseTab,
+    FinancialsTab,
+    NewsTab,
+    PricesTab,
+    SummaryTab,
+    TechnicalTab,
+)
 
 __all__ = [
     "BaseTab",

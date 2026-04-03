@@ -8,7 +8,7 @@ import streamlit as st
 
 from models import FinancialMetrics
 from domain.services.protocols import StockDataFetcherProtocol
-from ui.base_tab import BaseTab
+from ui.tabs.base import BaseTab
 from ui.components import render_diff_badge
 from utils import (
     calculate_cagr,

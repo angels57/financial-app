@@ -7,6 +7,7 @@ import yfinance as yf
 
 from domain.models import NewsItem, StockInfo
 from infrastructure.yfinance.mapper import YFinanceMapper
+from infrastructure.yfinance.yfinance_technical_service import YfinanceTechnicalService
 
 
 class YFinanceClient:
@@ -16,6 +17,11 @@ class YFinanceClient:
         self._ticker = ticker
         self._yf = yf.Ticker(ticker)
         self._mapper = YFinanceMapper()
+        self._tech_service = YfinanceTechnicalService()
+        self._tech_source = "yfinance"
+
+    def set_technical_source(self, source: str) -> None:
+        self._tech_source = source
 
     @property
     def ticker(self) -> str:
@@ -74,3 +80,32 @@ class YFinanceClient:
         except Exception:
             pass
         return []  # type: ignore[no-any-return]
+
+    def get_sma(
+        self,
+        time_period: int = 20,
+        interval: str = "daily",
+        force_refresh: bool = False,
+    ) -> dict[str, float] | None:
+        """Calculate SMA using local yfinance data."""
+        return self._tech_service.get_sma(self._ticker, interval, time_period)  # type: ignore[no-any-return]
+
+    def get_multiple_sma(
+        self,
+        periods: list[int] | None = None,
+        interval: str = "daily",
+        force_refresh: bool = False,
+    ) -> dict[int, dict[str, float] | None]:
+        """Calculate multiple SMAs using local yfinance data."""
+        if periods is None:
+            periods = [20, 50, 100, 200]
+        return self._tech_service.get_multiple_sma(self._ticker, interval, periods)  # type: ignore[no-any-return]
+
+    def get_rsi(
+        self,
+        time_period: int = 14,
+        interval: str = "daily",
+        force_refresh: bool = False,
+    ) -> dict[str, float] | None:
+        """Calculate RSI using local yfinance data."""
+        return self._tech_service.get_rsi(self._ticker, interval, time_period)  # type: ignore[no-any-return]

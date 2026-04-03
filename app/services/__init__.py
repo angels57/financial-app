@@ -1,4 +1,4 @@
-"""Services package — backward compatibility re-exports."""
+"""Backward-compatibility re-exports from domain.services."""
 
 from domain.services.calculator import FinancialCalculator
 
