@@ -10,6 +10,14 @@ from models import FinancialMetrics
 from domain.services.protocols import StockDataFetcherProtocol
 from ui.tabs.base import BaseTab
 from ui.components import render_diff_badge
+from ui.theme import (
+    COLOR_GROWTH_NEGATIVE,
+    COLOR_GROWTH_POSITIVE,
+    COLOR_NEUTRAL,
+    COLOR_PRICE_LINE,
+    LABEL_CRECIMIENTO,
+    LABEL_MARGEN,
+)
 from utils import (
     calculate_cagr,
     calculate_yoy_growth,
@@ -22,10 +30,10 @@ from utils import (
 
 
 METRIC_COLORS = {
-    "Revenue": "#1f77b4",
-    "Net Income": "#2ca02c",
-    "FCF": "#ff7f0e",
-    "Debt": "#d62728",
+    "Revenue": COLOR_PRICE_LINE,
+    "Net Income": COLOR_GROWTH_POSITIVE,
+    "FCF": COLOR_NEUTRAL,
+    "Debt": COLOR_GROWTH_NEGATIVE,
     "Ratios": "#9467bd",
 }
 
@@ -197,7 +205,7 @@ class FinancialsTab(BaseTab):
                     metrics.sales_growth,
                     metrics.years,
                     "Crecimiento Ventas YoY",
-                    "Crecimiento (%)",
+                    LABEL_CRECIMIENTO,
                     is_percent=True,
                     signed=True,
                     color=METRIC_COLORS["Ratios"],
@@ -211,7 +219,7 @@ class FinancialsTab(BaseTab):
                     metrics.net_margin,
                     metrics.years,
                     "Margen Neto",
-                    "Margen (%)",
+                    LABEL_MARGEN,
                     is_percent=True,
                     signed=True,
                     color=METRIC_COLORS["Net Income"],
@@ -341,8 +349,8 @@ class FinancialsTab(BaseTab):
             title="Dividendos por Acción",
             bar_label="Dividendo ($)",
             line_label="Crecimiento (%)",
-            bar_color="#2ca02c",
-            line_color="#ff7f0e",
+            bar_color=COLOR_GROWTH_POSITIVE,
+            line_color=COLOR_NEUTRAL,
         )
         st.plotly_chart(fig, width="stretch")
         with st.expander("¿Cómo leer este gráfico?"):
@@ -381,7 +389,7 @@ class FinancialsTab(BaseTab):
             bar_label="Acciones (Miles de Millones)",
             line_label="Cambio YoY (%)",
             bar_color="#9467bd",
-            line_color="#1f77b4",
+            line_color=COLOR_PRICE_LINE,
         )
         st.plotly_chart(fig, width="stretch")
         with st.expander("¿Cómo leer este gráfico?"):

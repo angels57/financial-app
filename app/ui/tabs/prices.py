@@ -302,6 +302,7 @@ class PricesTab(BaseTab):
             st.session_state[f"future_avg_{t}"] = promedio
 
         _fragment()
+        # st.session_state is untyped dict; value is float at runtime
         return st.session_state.get(f"future_avg_{t}", 0.0)  # type: ignore[no-any-return]
 
     def _render_returns(

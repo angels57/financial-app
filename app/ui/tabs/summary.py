@@ -9,6 +9,12 @@ from plotly.subplots import make_subplots
 from models import StockInfo
 from domain.services.protocols import StockDataFetcherProtocol
 from ui.tabs.base import BaseTab
+from ui.theme import (
+    COLOR_GROWTH_NEGATIVE,
+    COLOR_GROWTH_POSITIVE,
+    COLOR_NEUTRAL,
+    COLOR_PRICE_LINE,
+)
 from utils import format_large_number
 
 
@@ -54,7 +60,13 @@ class SummaryTab(BaseTab):
         pct = ((info.price - low) / (high - low)) * 100
         pct = max(0.0, min(100.0, pct))
 
-        bar_color = "#2ca02c" if pct < 70 else "#ff7f0e" if pct < 90 else "#d62728"
+        bar_color = (
+            COLOR_GROWTH_POSITIVE
+            if pct < 70
+            else COLOR_NEUTRAL
+            if pct < 90
+            else COLOR_GROWTH_NEGATIVE
+        )
 
         st.caption("Rango 52 Semanas")
         st.markdown(
@@ -177,7 +189,7 @@ class SummaryTab(BaseTab):
                     y=hist["Close"],
                     mode="lines",
                     name="Precio",
-                    line={"color": "#1f77b4", "width": 1.5},
+                    line={"color": COLOR_PRICE_LINE, "width": 1.5},
                     fill="tozeroy",
                     fillcolor="rgba(31,119,180,0.1)",
                     hovertemplate="%{x|%d %b %Y}<br>%{y:,.2f} "

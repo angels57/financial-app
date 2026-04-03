@@ -200,6 +200,7 @@ class CacheRepository:
         age = (datetime.now(timezone.utc) - fetched_at).total_seconds()
         if age > max_age_seconds:
             return None
+        # psycopg2 row index is untyped; value is cached JSON dict[str,float]
         return row[0]  # type: ignore[no-any-return]
 
     def upsert_technical_indicator(

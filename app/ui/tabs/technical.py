@@ -13,14 +13,22 @@ from domain.services.protocols import (
     TechnicalIndicatorFetcherProtocol,
 )
 from ui.tabs.base import BaseTab
+from ui.theme import (
+    COLOR_GROWTH_NEGATIVE,
+    COLOR_GROWTH_POSITIVE,
+    COLOR_SMA_100,
+    RSI_ZONE_NEUTRAL,
+    RSI_ZONE_OVERBOUGHT,
+    RSI_ZONE_OVERSOLD,
+    SMA_COLORS,
+    SMA_WIDTHS,
+)
 
 
 class TechnicalTab(BaseTab):
     """Renderiza el tab de análisis técnico con SMA y RSI."""
 
     SMA_PERIODS = [50, 100, 200]
-    SMA_COLORS = {50: "#ff7f0e", 100: "#7f7f7f", 200: "#2ca02c"}
-    SMA_WIDTHS = {50: 2.0, 100: 1.5, 200: 1.0}
     RSI_PERIOD = 14
 
     def render(
@@ -138,7 +146,7 @@ class TechnicalTab(BaseTab):
         from ui.components.charts import _TechnicalChartBuilder
 
         builder = _TechnicalChartBuilder(hist, currency, interval)
-        fig = builder.build_sma_chart(sma_data, self.SMA_COLORS, self.SMA_WIDTHS)
+        fig = builder.build_sma_chart(sma_data, SMA_COLORS, SMA_WIDTHS)
         st.plotly_chart(fig, width="stretch")
 
     def _render_sma_signals(
@@ -267,22 +275,22 @@ class TechnicalTab(BaseTab):
             prev_rsi = latest_rsi
 
         if latest_rsi > 70:
-            signal_color = "#d62728"
-            signal_text = "SOBRECOMPRA"
+            signal_color = COLOR_GROWTH_NEGATIVE
+            signal_text = RSI_ZONE_OVERBOUGHT.upper()
             interpretation = (
                 f"RSI en {latest_rsi:.2f} indica sobrecompra. "
                 "Posible corrección a la baja o reversión de tendencia."
             )
         elif latest_rsi < 30:
-            signal_color = "#2ca02c"
-            signal_text = "SOBREVENTA"
+            signal_color = COLOR_GROWTH_POSITIVE
+            signal_text = RSI_ZONE_OVERSOLD.upper()
             interpretation = (
                 f"RSI en {latest_rsi:.2f} indica sobreventa. "
                 "Posible rebote o reversión alcista."
             )
         else:
-            signal_color = "#7f7f7f"
-            signal_text = "NEUTRAL"
+            signal_color = COLOR_SMA_100
+            signal_text = RSI_ZONE_NEUTRAL.upper()
             interpretation = (
                 f"RSI en {latest_rsi:.2f} está en zona neutral. "
                 "Sin señales claras de sobrecompra/sobreventa."
@@ -317,7 +325,7 @@ class TechnicalTab(BaseTab):
             elif latest_rsi < 30:
                 st.metric("Interpretación", "Comprar / Oportunidad")
             else:
-                st.metric("Interpretación", "Neutral")
+                st.metric("Interpretación", RSI_ZONE_NEUTRAL)
 
         st.info(interpretation)
 
@@ -376,7 +384,7 @@ class TechnicalTab(BaseTab):
 
         builder = _TechnicalChartBuilder(hist, currency, interval)
         fig = builder.build_combined_chart(
-            sma_data, rsi_data, self.RSI_PERIOD, self.SMA_COLORS, self.SMA_WIDTHS
+            sma_data, rsi_data, self.RSI_PERIOD, SMA_COLORS, SMA_WIDTHS
         )
         st.plotly_chart(fig, width="stretch")
 

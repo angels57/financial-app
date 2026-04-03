@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 
 import psycopg
@@ -11,8 +10,7 @@ import streamlit as st
 if TYPE_CHECKING:
     from db.cache_repo import CacheRepository
 
-# Valid ticker: 1-5 uppercase letters, optionally followed by a dot and 1-2 letters (e.g. BRK.B)
-_TICKER_PATTERN = re.compile(r"^[A-Z]{1,5}(\.[A-Z]{1,2})?$")
+from domain.validators import validate_ticker
 
 
 def render_sidebar(cache_repo: CacheRepository | None = None) -> tuple[str, str]:
@@ -26,10 +24,12 @@ def render_sidebar(cache_repo: CacheRepository | None = None) -> tuple[str, str]
             .strip()
         )
 
-        ticker = raw_ticker
-        if raw_ticker and not _TICKER_PATTERN.match(raw_ticker):
-            st.warning("Ticker inválido. Usa entre 1-5 letras (ej: AAPL, TSLA, BRK.B).")
+        error = validate_ticker(raw_ticker)
+        if error:
+            st.warning(error)
             ticker = ""
+        else:
+            ticker = raw_ticker
 
         st.subheader("Configuración")
         period = st.selectbox(

@@ -7,6 +7,19 @@ import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
+from ui.theme import (
+    COLOR_GROWTH_NEGATIVE,
+    COLOR_GROWTH_POSITIVE,
+    COLOR_HLINE_MID,
+    COLOR_NEUTRAL,
+    COLOR_PRICE_LINE,
+    COLOR_RSI_COMBINED,
+    COLOR_RSI_LINE,
+    COLOR_SMA_100,
+    RSI_LABEL_OVERBOUGHT,
+    RSI_LABEL_OVERSOLD,
+)
+
 
 def render_price_history_chart(
     hist: pd.DataFrame,
@@ -32,7 +45,7 @@ def render_price_history_chart(
             y=hist["Close"],
             mode="lines",
             name="Precio",
-            line={"color": "#1f77b4", "width": 1.5},
+            line={"color": COLOR_PRICE_LINE, "width": 1.5},
             fill="tozeroy",
             fillcolor="rgba(31,119,180,0.1)",
             hovertemplate="%{x|%d %b %Y}<br>%{y:,.2f} " + currency + "<extra></extra>",
@@ -98,7 +111,13 @@ def render_52_week_range(
     pct = ((price - low) / (high - low)) * 100
     pct = max(0.0, min(100.0, pct))
 
-    bar_color = "#2ca02c" if pct < 70 else "#ff7f0e" if pct < 90 else "#d62728"
+    bar_color = (
+        COLOR_GROWTH_POSITIVE
+        if pct < 70
+        else COLOR_NEUTRAL
+        if pct < 90
+        else COLOR_GROWTH_NEGATIVE
+    )
 
     st.caption("Rango 52 Semanas")
     st.markdown(
@@ -166,7 +185,7 @@ class _TechnicalChartBuilder:
                 y=self._hist["Close"],
                 mode="lines",
                 name="Precio",
-                line={"color": "#1f77b4", "width": 1.5},
+                line={"color": COLOR_PRICE_LINE, "width": 1.5},
                 fill="tozeroy",
                 fillcolor=fillcolor,
                 hovertemplate=self._price_hover(),
@@ -221,6 +240,7 @@ class _TechnicalChartBuilder:
             layout_updates["yaxis2_title"] = yaxis2_title
         if legend:
             layout_updates["legend"] = legend
+        # layout_updates built dynamically with str keys; plotly accepts them at runtime
         fig.update_layout(**layout_updates)  # type: ignore[arg-type]
         if yaxis3_title:
             fig.update_layout(yaxis3_title=yaxis3_title)
@@ -281,7 +301,7 @@ class _TechnicalChartBuilder:
                     mode="lines",
                     name=f"SMA {period}",
                     line={
-                        "color": sma_colors.get(period, "#7f7f7f"),
+                        "color": sma_colors.get(period, COLOR_SMA_100),
                         "width": sma_widths.get(period, 1.5),
                     },
                     hovertemplate="%{x|%d %b %Y}<br>SMA "
@@ -320,7 +340,7 @@ class _TechnicalChartBuilder:
                 y=rsi_values,
                 mode="lines",
                 name=f"RSI {time_period}",
-                line={"color": "#7f7f7f", "width": 1.5},
+                line={"color": COLOR_RSI_LINE, "width": 1.5},
                 fill="tozeroy",
                 fillcolor="rgba(127,127,127,0.2)",
                 hovertemplate="%{x|%d %b %Y}<br>RSI: %{y:.2f}<extra></extra>",
@@ -348,22 +368,22 @@ class _TechnicalChartBuilder:
         fig.add_hline(
             y=70,
             line_dash="dash",
-            line_color="#d62728",
+            line_color=COLOR_GROWTH_NEGATIVE,
             row=row,
             col=1,
-            annotation_text="Sobrecompra (70)",
+            annotation_text=RSI_LABEL_OVERBOUGHT,
             annotation_position="bottom right",
         )
         fig.add_hline(
             y=30,
             line_dash="dash",
-            line_color="#2ca02c",
+            line_color=COLOR_GROWTH_POSITIVE,
             row=row,
             col=1,
-            annotation_text="Sobreventa (30)",
+            annotation_text=RSI_LABEL_OVERSOLD,
             annotation_position="top right",
         )
-        fig.add_hline(y=50, line_dash="dot", line_color="#999999", row=row, col=1)
+        fig.add_hline(y=50, line_dash="dot", line_color=COLOR_HLINE_MID, row=row, col=1)
 
     # -- Combined SMA + RSI chart -------------------------------------------
 
@@ -398,7 +418,7 @@ class _TechnicalChartBuilder:
                 y=rsi_values,
                 mode="lines",
                 name=f"RSI {time_period}",
-                line={"color": "#9b59b6", "width": 1.5},
+                line={"color": COLOR_RSI_COMBINED, "width": 1.5},
                 fill="tozeroy",
                 fillcolor="rgba(155,89,182,0.2)",
                 hovertemplate="%{x|%d %b %Y}<br>RSI: %{y:.2f}<extra></extra>",
