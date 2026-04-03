@@ -18,8 +18,14 @@ def render_sidebar(cache_repo: CacheRepository | None = None) -> tuple[str, str]
     with st.sidebar:
         st.title("🚀 Financial Stre")
         st.markdown("---")
+
+        default_ticker = st.query_params.get("ticker", "AAPL")
         raw_ticker = (
-            st.text_input("Buscar Ticker:", value="AAPL", placeholder="Ej: AAPL, TSLA")
+            st.text_input(
+                "Buscar Ticker:",
+                value=default_ticker,
+                placeholder="Ej: AAPL, TSLA",
+            )
             .upper()
             .strip()
         )
@@ -30,13 +36,13 @@ def render_sidebar(cache_repo: CacheRepository | None = None) -> tuple[str, str]
             ticker = ""
         else:
             ticker = raw_ticker
+            st.query_params["ticker"] = ticker
 
         st.subheader("Configuración")
         period = st.selectbox(
             "Periodo Histórico", options=["1y", "2y", "5y", "10y", "max"], index=2
         )
 
-        # Refresh button for fundamentals
         if ticker:
             if st.button("🔄 Refrescar datos fundamentales", width="stretch"):
                 st.session_state["force_refresh"] = True
@@ -44,7 +50,6 @@ def render_sidebar(cache_repo: CacheRepository | None = None) -> tuple[str, str]
 
         st.markdown("---")
 
-        # Consulted companies section
         if cache_repo is not None:
             _render_consulted_companies(cache_repo)
         else:
@@ -56,7 +61,7 @@ def render_sidebar(cache_repo: CacheRepository | None = None) -> tuple[str, str]
 
 
 def _render_consulted_companies(cache_repo: CacheRepository) -> None:
-    """Show recently consulted companies from the database."""
+    """Show recently consulted companies from the database as clickable buttons."""
     try:
         companies = cache_repo.get_consulted_companies()
     except psycopg.Error as e:
@@ -74,7 +79,13 @@ def _render_consulted_companies(cache_repo: CacheRepository) -> None:
         ticker = company["ticker"]
         name = company["short_name"] or ticker
         sector = company.get("sector", "")
-        label = f"**{ticker}** — {name}"
-        if sector:
-            label += f"  \n_{sector}_"
-        st.markdown(label, unsafe_allow_html=False)
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown(f"**{ticker}** — {name}")
+            if sector:
+                st.caption(sector)
+        with col2:
+            if st.button("→", key=f"goto_{ticker}", help=f"Ver {name} ({ticker})"):
+                st.query_params["ticker"] = ticker
+                st.session_state["force_refresh"] = True
+                st.rerun()
