@@ -72,7 +72,7 @@ def main() -> None:
                 FinancialsTab(title="📈 Finanzas"),
                 PricesTab(title="💰 Precios"),
                 TechnicalTab(title="🔬 Análisis Técnico"),
-                NewsTab(title="📰 Noticias", logger=logger),
+                NewsTab(title="📰 Noticias"),
             ]
 
             st_tabs = st.tabs([t.title for t in tabs])

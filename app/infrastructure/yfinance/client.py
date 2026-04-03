@@ -54,7 +54,7 @@ class YFinanceClient:
                 if cached is not None:
                     return cached
             except Exception:
-                logger.debug("Cache read failed for stock_info/%s", self._ticker)
+                logger.warning("Cache read failed for stock_info/%s", self._ticker)
 
         info = self._mapper.to_stock_info(self._ticker, self._yf.info, self._yf)
 
@@ -65,7 +65,7 @@ class YFinanceClient:
                 )
                 self._cache.upsert_stock_info(self._ticker, info, _SOURCE)
             except Exception:
-                logger.debug("Cache write failed for stock_info/%s", self._ticker)
+                logger.warning("Cache write failed for stock_info/%s", self._ticker)
 
         return info
 
@@ -83,7 +83,7 @@ class YFinanceClient:
                 if cached is not None:
                     return cached
             except Exception:
-                logger.debug(
+                logger.warning(
                     "Cache read failed for price_history/%s/%s", self._ticker, period
                 )
 
@@ -93,7 +93,7 @@ class YFinanceClient:
             try:
                 self._cache.upsert_price_history(self._ticker, period, df, _SOURCE)
             except Exception:
-                logger.debug(
+                logger.warning(
                     "Cache write failed for price_history/%s/%s", self._ticker, period
                 )
 
@@ -132,7 +132,7 @@ class YFinanceClient:
                 if cached is not None:
                     return cached
             except Exception:
-                logger.debug("Cache read failed for %s/%s", name, self._ticker)
+                logger.warning("Cache read failed for %s/%s", name, self._ticker)
 
         try:
             df = fetcher()
@@ -143,7 +143,7 @@ class YFinanceClient:
             try:
                 self._cache.upsert_financial_statement(self._ticker, name, df, _SOURCE)
             except Exception:
-                logger.debug("Cache write failed for %s/%s", name, self._ticker)
+                logger.warning("Cache write failed for %s/%s", name, self._ticker)
 
         return df
 
@@ -173,7 +173,7 @@ class YFinanceClient:
                 if cached is not None:
                     return cached  # type: ignore[no-any-return]
             except Exception:
-                logger.debug("Cache read failed for news/%s", self._ticker)
+                logger.warning("Cache read failed for news/%s", self._ticker)
 
         try:
             yf_news = self._yf.news
@@ -187,7 +187,7 @@ class YFinanceClient:
             try:
                 self._cache.upsert_news(self._ticker, items, _SOURCE)
             except Exception:
-                logger.debug("Cache write failed for news/%s", self._ticker)
+                logger.warning("Cache write failed for news/%s", self._ticker)
 
         return items
 
@@ -249,7 +249,7 @@ class YFinanceClient:
                 if cached is not None:
                     return cached  # type: ignore[no-any-return]
             except Exception:
-                logger.debug("Cache read failed for %s/%s", indicator, self._ticker)
+                logger.warning("Cache read failed for %s/%s", indicator, self._ticker)
 
         result = fetcher(self._ticker, interval, time_period)
 
@@ -259,6 +259,6 @@ class YFinanceClient:
                     self._ticker, indicator, interval, time_period, result, _SOURCE
                 )
             except Exception:
-                logger.debug("Cache write failed for %s/%s", indicator, self._ticker)
+                logger.warning("Cache write failed for %s/%s", indicator, self._ticker)
 
         return result

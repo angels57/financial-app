@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
 
 def render_price_history_chart(
-    hist,
+    hist: pd.DataFrame,
     currency: str,
     period: str,
 ) -> None:
@@ -121,3 +122,303 @@ def render_52_week_range(
         """,
         unsafe_allow_html=True,
     )
+
+
+# -- Technical chart builder ---------------------------------------------
+
+
+class _TechnicalChartBuilder:
+    """Builder para gráficos técnicos — extrae código común de price, SMA y RSI."""
+
+    _RANGESELECTOR_BUTTONS = [
+        {"count": 1, "label": "1M", "step": "month"},
+        {"count": 3, "label": "3M", "step": "month"},
+        {"count": 6, "label": "6M", "step": "month"},
+        {"count": 1, "label": "YTD", "step": "year", "stepmode": "todate"},
+        {"count": 1, "label": "1Y", "step": "year"},
+        {"label": "Todo", "step": "all"},
+    ]
+
+    _PRICE_HOVER = "date_price"
+
+    def __init__(
+        self,
+        hist: pd.DataFrame,
+        currency: str,
+        interval: str,
+    ) -> None:
+        self._hist = hist
+        self._currency = currency
+
+    def _price_hover(self) -> str:
+        return "%{x|%d %b %Y}<br>%{y:,.2f} " + self._currency + "<extra></extra>"
+
+    def _add_price_trace(
+        self,
+        fig: go.Figure,
+        row: int,
+        col: int,
+        fillcolor: str = "rgba(31,119,180,0.1)",
+    ) -> None:
+        fig.add_trace(
+            go.Scatter(
+                x=self._hist.index,
+                y=self._hist["Close"],
+                mode="lines",
+                name="Precio",
+                line={"color": "#1f77b4", "width": 1.5},
+                fill="tozeroy",
+                fillcolor=fillcolor,
+                hovertemplate=self._price_hover(),
+            ),
+            row=row,
+            col=col,
+        )
+
+    def _add_volume_trace(
+        self,
+        fig: go.Figure,
+        row: int,
+        col: int,
+    ) -> None:
+        if "Volume" not in self._hist.columns:
+            return
+        fig.add_trace(
+            go.Bar(
+                x=self._hist.index,
+                y=self._hist["Volume"],
+                name="Volumen",
+                marker_color="rgba(31,119,180,0.3)",
+                hovertemplate="%{x|%d %b %Y}<br>%{y:,.0f}<extra></extra>",
+            ),
+            row=row,
+            col=col,
+        )
+
+    def _apply_rangeselector_and_layout(
+        self,
+        fig: go.Figure,
+        xaxis_key: str,
+        yaxis_title: str,
+        height: int = 600,
+        showlegend: bool = True,
+        yaxis2_title: str | None = None,
+        yaxis3_title: str | None = None,
+        legend: dict | None = None,
+    ) -> None:
+        layout_updates: dict = {
+            "xaxis" + xaxis_key[4:]: {
+                "rangeselector": {"buttons": self._RANGESELECTOR_BUTTONS},
+                "rangeslider": {"visible": True},
+            },
+            "yaxis_title": yaxis_title,
+            "hovermode": "x unified",
+            "height": height,
+            "margin": {"l": 0, "r": 0, "t": 10, "b": 0},
+            "showlegend": showlegend,
+        }
+        if yaxis2_title:
+            layout_updates["yaxis2_title"] = yaxis2_title
+        if legend:
+            layout_updates["legend"] = legend
+        fig.update_layout(**layout_updates)  # type: ignore[arg-type]
+        if yaxis3_title:
+            fig.update_layout(yaxis3_title=yaxis3_title)
+
+    # -- SMA-only chart -----------------------------------------------------
+
+    def build_sma_chart(
+        self,
+        sma_data: dict[int, dict[str, float] | None],
+        sma_colors: dict[int, str],
+        sma_widths: dict[int, float],
+        row_heights: list[float] = [0.75, 0.25],
+    ) -> go.Figure:
+        fig = make_subplots(
+            rows=2,
+            cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.05,
+            row_heights=row_heights,
+        )
+
+        self._add_price_trace(fig, row=1, col=1)
+        self._add_sma_traces(fig, sma_data, sma_colors, sma_widths, row=1)
+        self._add_volume_trace(fig, row=2, col=1)
+
+        self._apply_rangeselector_and_layout(
+            fig,
+            xaxis_key="xaxis2",
+            yaxis_title=f"Precio ({self._currency})",
+            yaxis2_title="Volumen",
+            height=600,
+            showlegend=True,
+            legend=dict(
+                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+            ),
+        )
+        return fig
+
+    def _add_sma_traces(
+        self,
+        fig: go.Figure,
+        sma_data: dict[int, dict[str, float] | None],
+        sma_colors: dict[int, str],
+        sma_widths: dict[int, float],
+        row: int,
+    ) -> None:
+        for period, data in sma_data.items():
+            if data is None:
+                continue
+            sorted_dates = sorted(data.keys())
+            values = [data[d] for d in sorted_dates]
+            dates_pd = pd.to_datetime(sorted_dates)
+
+            fig.add_trace(
+                go.Scatter(
+                    x=dates_pd,
+                    y=values,
+                    mode="lines",
+                    name=f"SMA {period}",
+                    line={
+                        "color": sma_colors.get(period, "#7f7f7f"),
+                        "width": sma_widths.get(period, 1.5),
+                    },
+                    hovertemplate="%{x|%d %b %Y}<br>SMA "
+                    + str(period)
+                    + ": %{y:,.2f}<extra></extra>",
+                ),
+                row=row,
+                col=1,
+            )
+
+    # -- RSI-only chart -----------------------------------------------------
+
+    def build_rsi_chart(
+        self,
+        rsi_data: dict[str, float],
+        time_period: int,
+        row_heights: list[float] = [0.4, 0.6],
+    ) -> go.Figure:
+        fig = make_subplots(
+            rows=2,
+            cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.05,
+            row_heights=row_heights,
+        )
+
+        rsi_dates = sorted(rsi_data.keys())
+        rsi_values = [rsi_data[d] for d in rsi_dates]
+        rsi_dates_pd = pd.to_datetime(rsi_dates)
+
+        self._add_price_trace(fig, row=1, col=1, fillcolor="rgba(31,119,180,0.1)")
+
+        fig.add_trace(
+            go.Scatter(
+                x=rsi_dates_pd,
+                y=rsi_values,
+                mode="lines",
+                name=f"RSI {time_period}",
+                line={"color": "#7f7f7f", "width": 1.5},
+                fill="tozeroy",
+                fillcolor="rgba(127,127,127,0.2)",
+                hovertemplate="%{x|%d %b %Y}<br>RSI: %{y:.2f}<extra></extra>",
+            ),
+            row=2,
+            col=1,
+        )
+
+        self._add_rsi_hlines(fig, row=2)
+        self._apply_rangeselector_and_layout(
+            fig,
+            xaxis_key="xaxis2",
+            yaxis_title=f"Precio ({self._currency})",
+            yaxis2_title=f"RSI {time_period}",
+            height=600,
+            showlegend=True,
+            legend=dict(
+                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+            ),
+        )
+        fig.update_yaxes(range=[0, 100], row=2, col=1)
+        return fig
+
+    def _add_rsi_hlines(self, fig: go.Figure, row: int) -> None:
+        fig.add_hline(
+            y=70,
+            line_dash="dash",
+            line_color="#d62728",
+            row=row,
+            col=1,
+            annotation_text="Sobrecompra (70)",
+            annotation_position="bottom right",
+        )
+        fig.add_hline(
+            y=30,
+            line_dash="dash",
+            line_color="#2ca02c",
+            row=row,
+            col=1,
+            annotation_text="Sobreventa (30)",
+            annotation_position="top right",
+        )
+        fig.add_hline(y=50, line_dash="dot", line_color="#999999", row=row, col=1)
+
+    # -- Combined SMA + RSI chart -------------------------------------------
+
+    def build_combined_chart(
+        self,
+        sma_data: dict[int, dict[str, float] | None],
+        rsi_data: dict[str, float],
+        time_period: int,
+        sma_colors: dict[int, str],
+        sma_widths: dict[int, float],
+        row_heights: list[float] = [0.45, 0.25, 0.30],
+    ) -> go.Figure:
+        fig = make_subplots(
+            rows=3,
+            cols=1,
+            shared_xaxes=True,
+            vertical_spacing=0.05,
+            row_heights=row_heights,
+        )
+
+        self._add_price_trace(fig, row=1, col=1)
+        self._add_sma_traces(fig, sma_data, sma_colors, sma_widths, row=1)
+        self._add_volume_trace(fig, row=2, col=1)
+
+        rsi_dates = sorted(rsi_data.keys())
+        rsi_values = [rsi_data[d] for d in rsi_dates]
+        rsi_dates_pd = pd.to_datetime(rsi_dates)
+
+        fig.add_trace(
+            go.Scatter(
+                x=rsi_dates_pd,
+                y=rsi_values,
+                mode="lines",
+                name=f"RSI {time_period}",
+                line={"color": "#9b59b6", "width": 1.5},
+                fill="tozeroy",
+                fillcolor="rgba(155,89,182,0.2)",
+                hovertemplate="%{x|%d %b %Y}<br>RSI: %{y:.2f}<extra></extra>",
+            ),
+            row=3,
+            col=1,
+        )
+
+        self._add_rsi_hlines(fig, row=3)
+        self._apply_rangeselector_and_layout(
+            fig,
+            xaxis_key="xaxis3",
+            yaxis_title=f"Precio ({self._currency})",
+            yaxis2_title="Volumen",
+            yaxis3_title=f"RSI {time_period}",
+            height=700,
+            showlegend=True,
+            legend=dict(
+                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+            ),
+        )
+        fig.update_yaxes(range=[0, 100], row=3, col=1)
+        return fig

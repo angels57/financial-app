@@ -58,7 +58,10 @@ def _render_consulted_companies(cache_repo: CacheRepository) -> None:
     """Show recently consulted companies from the database."""
     try:
         companies = cache_repo.get_consulted_companies()
-    except Exception:
+    except Exception as e:
+        import logging
+
+        logging.getLogger(__name__).warning("Failed to load consulted companies: %s", e)
         return
 
     if not companies:

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 import streamlit as st
@@ -14,9 +13,8 @@ from ui.tabs.base import BaseTab
 class NewsTab(BaseTab):
     """Renderiza el tab de noticias — solo depende de StockService (ISP)."""
 
-    def __init__(self, title: str, logger: logging.Logger) -> None:
+    def __init__(self, title: str) -> None:
         super().__init__(title)
-        self._logger = logger
 
     def render(self, *, stock_service: StockDataFetcherProtocol, **kwargs: Any) -> None:
         st.subheader(f"Últimas Noticias de {stock_service.ticker}")

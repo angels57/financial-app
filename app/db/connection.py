@@ -22,6 +22,6 @@ def get_pool() -> ConnectionPool | None:
     try:
         _pool = ConnectionPool(settings.db_url, min_size=1, max_size=5, open=True)
         return _pool
-    except Exception:
+    except (ConnectionError, OSError):
         logger.exception("Failed to create database connection pool")
         return None

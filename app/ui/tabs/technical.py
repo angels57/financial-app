@@ -5,9 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
-from plotly.subplots import make_subplots
 
 from models import StockInfo
 from domain.services.protocols import (
@@ -137,100 +135,10 @@ class TechnicalTab(BaseTab):
         currency: str,
         interval: str,
     ) -> None:
-        fig = make_subplots(
-            rows=2,
-            cols=1,
-            shared_xaxes=True,
-            vertical_spacing=0.05,
-            row_heights=[0.75, 0.25],
-        )
+        from ui.components.charts import _TechnicalChartBuilder
 
-        fig.add_trace(
-            go.Scatter(
-                x=hist.index,
-                y=hist["Close"],
-                mode="lines",
-                name="Precio",
-                line={"color": "#1f77b4", "width": 1.5},
-                fill="tozeroy",
-                fillcolor="rgba(31,119,180,0.1)",
-                hovertemplate="%{x|%d %b %Y}<br>%{y:,.2f} "
-                + currency
-                + "<extra></extra>",
-            ),
-            row=1,
-            col=1,
-        )
-
-        for period in self.SMA_PERIODS:
-            data = sma_data.get(period)
-            if data is None:
-                continue
-            sorted_dates = sorted(data.keys())
-            values = [data[d] for d in sorted_dates]
-            dates_pd = pd.to_datetime(sorted_dates)
-
-            fig.add_trace(
-                go.Scatter(
-                    x=dates_pd,
-                    y=values,
-                    mode="lines",
-                    name=f"SMA {period}",
-                    line={
-                        "color": self.SMA_COLORS[period],
-                        "width": self.SMA_WIDTHS[period],
-                    },
-                    hovertemplate="%{x|%d %b %Y}<br>SMA "
-                    + str(period)
-                    + ": %{y:,.2f}<extra></extra>",
-                ),
-                row=1,
-                col=1,
-            )
-
-        if "Volume" in hist.columns:
-            fig.add_trace(
-                go.Bar(
-                    x=hist.index,
-                    y=hist["Volume"],
-                    name="Volumen",
-                    marker_color="rgba(31,119,180,0.3)",
-                    hovertemplate="%{x|%d %b %Y}<br>%{y:,.0f}<extra></extra>",
-                ),
-                row=2,
-                col=1,
-            )
-
-        fig.update_layout(
-            xaxis2={
-                "rangeselector": {
-                    "buttons": [
-                        {"count": 1, "label": "1M", "step": "month"},
-                        {"count": 3, "label": "3M", "step": "month"},
-                        {"count": 6, "label": "6M", "step": "month"},
-                        {
-                            "count": 1,
-                            "label": "YTD",
-                            "step": "year",
-                            "stepmode": "todate",
-                        },
-                        {"count": 1, "label": "1Y", "step": "year"},
-                        {"label": "Todo", "step": "all"},
-                    ]
-                },
-                "rangeslider": {"visible": True},
-            },
-            yaxis_title=f"Precio ({currency})",
-            yaxis2_title="Volumen",
-            hovermode="x unified",
-            height=600,
-            margin={"l": 0, "r": 0, "t": 10, "b": 0},
-            showlegend=True,
-            legend=dict(
-                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
-            ),
-        )
-
+        builder = _TechnicalChartBuilder(hist, currency, interval)
+        fig = builder.build_sma_chart(sma_data, self.SMA_COLORS, self.SMA_WIDTHS)
         st.plotly_chart(fig, width="stretch")
 
     def _render_sma_signals(
@@ -339,105 +247,10 @@ class TechnicalTab(BaseTab):
         if hist.empty:
             st.warning("No hay datos de precio disponibles.")
             return
+        from ui.components.charts import _TechnicalChartBuilder
 
-        rsi_dates = sorted(rsi_data.keys())
-        rsi_values = [rsi_data[d] for d in rsi_dates]
-        rsi_dates_pd = pd.to_datetime(rsi_dates)
-
-        price_hist = hist[hist.index.isin(rsi_dates_pd)]
-
-        fig = make_subplots(
-            rows=2,
-            cols=1,
-            shared_xaxes=True,
-            vertical_spacing=0.05,
-            row_heights=[0.4, 0.6],
-        )
-
-        fig.add_trace(
-            go.Scatter(
-                x=price_hist.index,
-                y=price_hist["Close"],
-                mode="lines",
-                name="Precio",
-                line={"color": "#1f77b4", "width": 1.5},
-                fill="tozeroy",
-                fillcolor="rgba(31,119,180,0.1)",
-                hovertemplate="%{x|%d %b %Y}<br>%{y:,.2f} "
-                + currency
-                + "<extra></extra>",
-            ),
-            row=1,
-            col=1,
-        )
-
-        fig.add_trace(
-            go.Scatter(
-                x=rsi_dates_pd,
-                y=rsi_values,
-                mode="lines",
-                name=f"RSI {time_period}",
-                line={"color": "#7f7f7f", "width": 1.5},
-                fill="tozeroy",
-                fillcolor="rgba(127,127,127,0.2)",
-                hovertemplate="%{x|%d %b %Y}<br>RSI: %{y:.2f}<extra></extra>",
-            ),
-            row=2,
-            col=1,
-        )
-
-        fig.add_hline(
-            y=70,
-            line_dash="dash",
-            line_color="#d62728",
-            row=2,
-            col=1,
-            annotation_text="Sobrecompra (70)",
-            annotation_position="bottom right",
-        )
-        fig.add_hline(
-            y=30,
-            line_dash="dash",
-            line_color="#2ca02c",
-            row=2,
-            col=1,
-            annotation_text="Sobreventa (30)",
-            annotation_position="top right",
-        )
-        fig.add_hline(y=50, line_dash="dot", line_color="#999999", row=2, col=1)
-
-        fig.update_layout(
-            xaxis2={
-                "rangeselector": {
-                    "buttons": [
-                        {"count": 1, "label": "1M", "step": "month"},
-                        {"count": 3, "label": "3M", "step": "month"},
-                        {"count": 6, "label": "6M", "step": "month"},
-                        {
-                            "count": 1,
-                            "label": "YTD",
-                            "step": "year",
-                            "stepmode": "todate",
-                        },
-                        {"count": 1, "label": "1Y", "step": "year"},
-                        {"label": "Todo", "step": "all"},
-                    ]
-                },
-                "rangeslider": {"visible": True},
-            },
-            yaxis_title=f"Precio ({currency})",
-            yaxis2_title=f"RSI {time_period}",
-            hovermode="x unified",
-            height=600,
-            margin={"l": 0, "r": 0, "t": 10, "b": 0},
-            showlegend=True,
-            legend=dict(
-                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
-            ),
-        )
-
-        fig.update_yaxes(range=[0, 100], row=2, col=1)
-
+        builder = _TechnicalChartBuilder(hist, currency, interval)
+        fig = builder.build_rsi_chart(rsi_data, time_period)
         st.plotly_chart(fig, width="stretch")
 
     def _render_rsi_signals(self, rsi_data: dict[str, float], time_period: int) -> None:
@@ -559,142 +372,12 @@ class TechnicalTab(BaseTab):
         currency: str,
         interval: str,
     ) -> None:
-        fig = make_subplots(
-            rows=3,
-            cols=1,
-            shared_xaxes=True,
-            vertical_spacing=0.05,
-            row_heights=[0.45, 0.25, 0.30],
+        from ui.components.charts import _TechnicalChartBuilder
+
+        builder = _TechnicalChartBuilder(hist, currency, interval)
+        fig = builder.build_combined_chart(
+            sma_data, rsi_data, self.RSI_PERIOD, self.SMA_COLORS, self.SMA_WIDTHS
         )
-
-        fig.add_trace(
-            go.Scatter(
-                x=hist.index,
-                y=hist["Close"],
-                mode="lines",
-                name="Precio",
-                line={"color": "#1f77b4", "width": 1.5},
-                fill="tozeroy",
-                fillcolor="rgba(31,119,180,0.1)",
-                hovertemplate="%{x|%d %b %Y}<br>%{y:,.2f} "
-                + currency
-                + "<extra></extra>",
-            ),
-            row=1,
-            col=1,
-        )
-
-        for period in self.SMA_PERIODS:
-            data = sma_data.get(period)
-            if data is None:
-                continue
-            sorted_dates = sorted(data.keys())
-            values = [data[d] for d in sorted_dates]
-            dates_pd = pd.to_datetime(sorted_dates)
-
-            fig.add_trace(
-                go.Scatter(
-                    x=dates_pd,
-                    y=values,
-                    mode="lines",
-                    name=f"SMA {period}",
-                    line={
-                        "color": self.SMA_COLORS[period],
-                        "width": self.SMA_WIDTHS[period],
-                    },
-                    hovertemplate="%{x|%d %b %Y}<br>SMA "
-                    + str(period)
-                    + ": %{y:,.2f}<extra></extra>",
-                ),
-                row=1,
-                col=1,
-            )
-
-        if "Volume" in hist.columns:
-            fig.add_trace(
-                go.Bar(
-                    x=hist.index,
-                    y=hist["Volume"],
-                    name="Volumen",
-                    marker_color="rgba(31,119,180,0.3)",
-                    hovertemplate="%{x|%d %b %Y}<br>%{y:,.0f}<extra></extra>",
-                ),
-                row=2,
-                col=1,
-            )
-
-        rsi_dates = sorted(rsi_data.keys())
-        rsi_values = [rsi_data[d] for d in rsi_dates]
-        rsi_dates_pd = pd.to_datetime(rsi_dates)
-
-        fig.add_trace(
-            go.Scatter(
-                x=rsi_dates_pd,
-                y=rsi_values,
-                mode="lines",
-                name=f"RSI {self.RSI_PERIOD}",
-                line={"color": "#9b59b6", "width": 1.5},
-                fill="tozeroy",
-                fillcolor="rgba(155,89,182,0.2)",
-                hovertemplate="%{x|%d %b %Y}<br>RSI: %{y:.2f}<extra></extra>",
-            ),
-            row=3,
-            col=1,
-        )
-
-        fig.add_hline(
-            y=70,
-            line_dash="dash",
-            line_color="#d62728",
-            row=3,
-            col=1,
-            annotation_text="70",
-            annotation_position="bottom right",
-        )
-        fig.add_hline(
-            y=30,
-            line_dash="dash",
-            line_color="#2ca02c",
-            row=3,
-            col=1,
-            annotation_text="30",
-            annotation_position="top right",
-        )
-        fig.add_hline(y=50, line_dash="dot", line_color="#999999", row=3, col=1)
-
-        fig.update_layout(
-            xaxis3={
-                "rangeselector": {
-                    "buttons": [
-                        {"count": 1, "label": "1M", "step": "month"},
-                        {"count": 3, "label": "3M", "step": "month"},
-                        {"count": 6, "label": "6M", "step": "month"},
-                        {
-                            "count": 1,
-                            "label": "YTD",
-                            "step": "year",
-                            "stepmode": "todate",
-                        },
-                        {"count": 1, "label": "1Y", "step": "year"},
-                        {"label": "Todo", "step": "all"},
-                    ]
-                },
-                "rangeslider": {"visible": True},
-            },
-            yaxis_title=f"Precio ({currency})",
-            yaxis2_title="Volumen",
-            yaxis3_title=f"RSI {self.RSI_PERIOD}",
-            hovermode="x unified",
-            height=700,
-            margin={"l": 0, "r": 0, "t": 10, "b": 0},
-            showlegend=True,
-            legend=dict(
-                orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
-            ),
-        )
-
-        fig.update_yaxes(range=[0, 100], row=3, col=1)
-
         st.plotly_chart(fig, width="stretch")
 
     def _render_combined_signals(

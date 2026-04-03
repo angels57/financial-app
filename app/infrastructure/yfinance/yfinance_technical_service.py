@@ -42,7 +42,7 @@ class YfinanceTechnicalService:
                 date_str = pd.Timestamp(dt).strftime("%Y-%m-%d")
                 result[date_str] = round(float(val), 2)
             return result if result else None
-        except Exception:
+        except (KeyError, ValueError, TypeError):
             return None
 
     @staticmethod
@@ -83,7 +83,7 @@ class YfinanceTechnicalService:
                 date_str = pd.Timestamp(dt).strftime("%Y-%m-%d")
                 result[date_str] = round(float(val), 2)
             return result if result else None
-        except Exception:
+        except (KeyError, ValueError, TypeError):
             return None
 
     def get_multiple_sma(
@@ -119,7 +119,7 @@ class YfinanceTechnicalService:
                     result[date_str] = round(float(val), 2)
                 results[p] = result if result else None
             return results
-        except Exception:
+        except (KeyError, ValueError, TypeError):
             for p in periods:
                 results[p] = None
             return results

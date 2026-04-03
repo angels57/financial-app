@@ -34,8 +34,9 @@ class GuruFocusScraper:
         Returns:
             The fair value as a float, or None if not found or error.
         """
-        with sync_playwright() as p:
-            try:
+        browser = None
+        try:
+            with sync_playwright() as p:
                 browser = p.chromium.launch(headless=self.headless)
                 context = browser.new_context(
                     user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
@@ -58,9 +59,9 @@ class GuruFocusScraper:
 
                 return None
 
-            except Exception as e:
-                logger.warning(f"get_fair_value failed for {ticker}: {e}")
-                return None
-            finally:
-                if "browser" in locals():
-                    browser.close()
+        except RETRY_ERRORS as e:
+            logger.warning(f"get_fair_value failed for {ticker}: {e}")
+            return None
+        finally:
+            if browser is not None:
+                browser.close()
