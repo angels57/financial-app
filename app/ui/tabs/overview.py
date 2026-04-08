@@ -9,10 +9,10 @@ import plotly.graph_objects as go
 import streamlit as st
 import yfinance as yf
 
-from models import FinancialMetrics, StockInfo
-from domain.services.protocols import StockDataFetcherProtocol
-from ui.tabs.base import BaseTab
-from ui.theme import (
+from app.domain.models import FinancialMetrics, StockInfo
+from app.domain.services.protocols import StockDataFetcherProtocol
+from app.ui.tabs.base import BaseTab
+from app.ui.theme import (
     COLOR_GROWTH_NEGATIVE,
     COLOR_GROWTH_POSITIVE,
     COLOR_NEUTRAL,
@@ -20,14 +20,14 @@ from ui.theme import (
     LABEL_CRECIMIENTO,
     LABEL_MARGEN,
 )
-from ui.components import (
+from app.ui.components import (
     render_52_week_range,
     render_diff_badge,
     render_period_pills,
     render_price_eps_chart,
     slice_history_to_period,
 )
-from utils import (
+from app.utils import (
     calculate_cagr,
     calculate_yoy_growth,
     draw_plotly_bar_chart,

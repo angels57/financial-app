@@ -7,13 +7,13 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from models import StockInfo
-from domain.services.protocols import (
+from app.domain.models import StockInfo
+from app.domain.services.protocols import (
     StockDataServiceProtocol,
     TechnicalIndicatorFetcherProtocol,
 )
-from ui.tabs.base import BaseTab
-from ui.theme import (
+from app.ui.tabs.base import BaseTab
+from app.ui.theme import (
     COLOR_GROWTH_NEGATIVE,
     COLOR_GROWTH_POSITIVE,
     COLOR_SMA_100,

@@ -6,7 +6,7 @@ from typing import Protocol, runtime_checkable
 
 import pandas as pd
 
-from models import NewsItem, StockInfo
+from app.domain.models import NewsItem, StockInfo
 
 
 @runtime_checkable

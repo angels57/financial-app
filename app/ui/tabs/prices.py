@@ -6,10 +6,10 @@ from typing import Any
 
 import streamlit as st
 
-from models import StockInfo
-from scrapers.guru_focus_scraper import GuruFocusScraper
-from ui.tabs.base import BaseTab
-from ui.components import render_diff_badge
+from app.domain.models import StockInfo
+from app.scrapers.guru_focus_scraper import GuruFocusScraper
+from app.ui.tabs.base import BaseTab
+from app.ui.components import render_diff_badge
 
 
 class PricesTab(BaseTab):
