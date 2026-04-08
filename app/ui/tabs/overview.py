@@ -1,4 +1,4 @@
-"""Tab de análisis financiero."""
+"""Tab de overview con hero card, combo chart EPS/precio, KPI row y sub-tabs."""
 
 from __future__ import annotations
 
@@ -7,11 +7,11 @@ from datetime import datetime
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import yfinance as yf
 
-from models import FinancialMetrics
+from models import FinancialMetrics, StockInfo
 from domain.services.protocols import StockDataFetcherProtocol
 from ui.tabs.base import BaseTab
-from ui.components import render_diff_badge
 from ui.theme import (
     COLOR_GROWTH_NEGATIVE,
     COLOR_GROWTH_POSITIVE,
@@ -19,6 +19,13 @@ from ui.theme import (
     COLOR_PRICE_LINE,
     LABEL_CRECIMIENTO,
     LABEL_MARGEN,
+)
+from ui.components import (
+    render_52_week_range,
+    render_diff_badge,
+    render_period_pills,
+    render_price_eps_chart,
+    slice_history_to_period,
 )
 from utils import (
     calculate_cagr,
@@ -29,6 +36,15 @@ from utils import (
     draw_plotly_multi_line_chart,
     format_large_number,
 )
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _fetch_benchmark_history(period: str) -> pd.DataFrame:
+    """Fetch S&P 500 history (process-level cache, separate from app DB cache)."""
+    try:
+        return yf.Ticker("^GSPC").history(period=period)
+    except (ValueError, KeyError):
+        return pd.DataFrame()
 
 
 METRIC_COLORS = {
@@ -108,24 +124,131 @@ def _cagr_badges(
     return [(cagr, f"{label} {n_years}a")]
 
 
-class FinancialsTab(BaseTab):
-    """Renderiza el tab de finanzas con métricas y gráficos."""
+class OverviewTab(BaseTab):
+    """Renderiza el tab de overview con hero card, KPIs y sub-tabs."""
 
     def render(
         self,
         *,
+        stock_service: StockDataFetcherProtocol,
+        info: StockInfo,
+        period: str,  # noqa: ARG002 — kept for protocol compatibility
         ticker: str,
         metrics: FinancialMetrics,
-        stock_service: StockDataFetcherProtocol,
         **kwargs: object,
     ) -> None:
-        self._render_kpi_cards(metrics)
+        self._render_hero(info)
         st.markdown("---")
-        self._render_themed_tabs(ticker, metrics, stock_service)
+        self._render_combo_chart_section(stock_service, info)
         st.markdown("---")
-        self._render_data_table(stock_service)
+        self._render_kpi_row(metrics)
+        st.markdown("---")
+        self._render_sub_tabs(ticker, metrics, stock_service, info)
 
-    def _render_kpi_cards(self, metrics: FinancialMetrics) -> None:
+    def _render_hero(self, info: StockInfo) -> None:
+        col_name, col_price, col_eps = st.columns([2, 1, 1])
+
+        with col_name:
+            st.markdown(
+                f"""
+                <div style="padding-top:8px;">
+                    <div style="font-size:1.6rem; font-weight:600; line-height:1.2;">
+                        {info.short_name}
+                    </div>
+                    <div style="font-size:0.9rem; color:#888; margin-top:4px;">
+                        {info.ticker}
+                        {f"· {info.sector}" if info.sector else ""}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        with col_price:
+            with st.container(border=True):
+                st.caption("PRICE")
+                st.markdown(
+                    f"<div style='font-size:1.7rem; font-weight:600;'>"
+                    f"{info.currency} {info.price:,.2f}</div>",
+                    unsafe_allow_html=True,
+                )
+
+        with col_eps:
+            with st.container(border=True):
+                st.caption("EPS (TTM)")
+                eps_str = (
+                    f"{info.currency} {info.eps:,.2f}"
+                    if info.eps is not None
+                    else "N/A"
+                )
+                st.markdown(
+                    f"<div style='font-size:1.7rem; font-weight:600;'>{eps_str}</div>",
+                    unsafe_allow_html=True,
+                )
+
+        # 52-week range bar full-width below the hero cards
+        render_52_week_range(
+            info.price, info.week_52_low, info.week_52_high, info.currency
+        )
+
+    # -- Combo chart + period pills + benchmark toggle ----------------------
+
+    def _render_combo_chart_section(
+        self,
+        stock_service: StockDataFetcherProtocol,
+        info: StockInfo,
+    ) -> None:
+        full_history = stock_service.get_history(period="max")
+        if full_history.empty:
+            st.warning("No hay datos históricos para este ticker.")
+            return
+
+        # Toggle right-aligned above the pills
+        _, toggle_col = st.columns([3, 1])
+        with toggle_col:
+            compare_benchmark = st.toggle(
+                "Comparar S&P 500",
+                value=False,
+                key="overview_compare_sp500",
+            )
+
+        selected_period = render_period_pills(
+            full_history, key="overview_period", default="5y"
+        )
+
+        sliced_history = slice_history_to_period(full_history, selected_period)
+        # Auto-pick frequency: quarterly for short ranges, annual for long ones
+        frequency = "annual" if selected_period in ("5y", "10y", "max") else "quarterly"
+        eps_series = stock_service.get_eps_series(frequency=frequency)
+
+        # Filter EPS to the visible window so bars don't overflow
+        # Normalize tz: history index is tz-aware (UTC), EPS dates are tz-naive
+        if eps_series is not None and not sliced_history.empty:
+            window_start = sliced_history.index[0]
+            if hasattr(window_start, "tzinfo") and window_start.tzinfo is not None:
+                window_start = window_start.replace(tzinfo=None)
+            eps_dates = pd.to_datetime(eps_series.index)
+            if eps_dates.tz is not None:
+                eps_dates = eps_dates.tz_localize(None)
+            mask = eps_dates >= window_start
+            eps_series = eps_series[mask]
+
+        benchmark_df: pd.DataFrame | None = None
+        if compare_benchmark:
+            benchmark_df = _fetch_benchmark_history(selected_period)
+            if benchmark_df.empty:
+                st.warning("No se pudo cargar el S&P 500.")
+                benchmark_df = None
+
+        render_price_eps_chart(
+            hist=sliced_history,
+            eps_series=eps_series,
+            currency=info.currency,
+            frequency=frequency,
+            benchmark=benchmark_df,
+        )
+
+    def _render_kpi_row(self, metrics: FinancialMetrics) -> None:
         deltas = metrics.yoy_deltas()
         n = len(metrics.years)
 
@@ -159,40 +282,110 @@ class FinancialsTab(BaseTab):
                     else:
                         st.metric(key, "N/A")
 
-    def _render_themed_tabs(
+    def _render_sub_tabs(
         self,
-        ticker: str,
+        ticker: str,  # noqa: ARG002 — kept for future per-ticker subtab data
         metrics: FinancialMetrics,
         stock_service: StockDataFetcherProtocol,
+        info: StockInfo,
     ) -> None:
-        if not metrics.years:
-            st.info("Datos financieros no disponibles.")
-            return
-
-        tabs = st.tabs(
+        sub_tabs = st.tabs(
             [
-                "Crecimiento",
-                "Cash Flow",
-                "Salud Financiera",
-                "Retorno al Accionista",
+                "🏢 Empresa",
+                "📈 Crecimiento",
+                "💵 Cash Flow",
+                "🏥 Salud",
+                "🧾 Accionista",
+                "📋 Resultados",
             ]
         )
 
-        with tabs[0]:
-            self._render_growth_tab(metrics)
+        with sub_tabs[0]:
+            self._render_company_subtab(info)
 
-        with tabs[1]:
-            self._render_cashflow_tab(metrics)
+        with sub_tabs[1]:
+            self._render_growth_subtab(metrics)
 
-        with tabs[2]:
-            self._render_health_tab(metrics)
+        with sub_tabs[2]:
+            self._render_cashflow_subtab(metrics)
 
-        with tabs[3]:
-            self._render_shareholder_tab(stock_service)
+        with sub_tabs[3]:
+            self._render_health_subtab(metrics)
 
-    # -- Tab 1: Crecimiento --------------------------------------------------
+        with sub_tabs[4]:
+            self._render_shareholder_subtab(stock_service)
 
-    def _render_growth_tab(self, metrics: FinancialMetrics) -> None:
+        with sub_tabs[5]:
+            self._render_results_subtab(stock_service)
+
+    def _render_company_subtab(self, info: StockInfo) -> None:
+        # Market & valuation metrics row
+        c1, c2, c3, c4, c5 = st.columns(5)
+        c1.metric("Market Cap", format_large_number(info.market_cap, info.currency))
+        c2.metric("P/E", f"{info.pe_ratio:.2f}" if info.pe_ratio else "N/A")
+        c3.metric("P/FCF", f"{info.price_to_fcf:.2f}" if info.price_to_fcf else "N/A")
+        c4.metric("Beta", f"{info.beta:.2f}" if info.beta is not None else "N/A")
+        c5.metric(
+            "Target",
+            f"{info.currency} {info.target_price:,.2f}"
+            if info.target_price is not None
+            else "N/A",
+            info.recommendation.upper() if info.recommendation else None,
+        )
+
+        st.markdown("---")
+
+        col_info, col_desc = st.columns([1, 2])
+
+        with col_info:
+            if info.sector:
+                st.markdown(f"**Sector:** {info.sector}")
+            if info.industry:
+                st.markdown(f"**Industria:** {info.industry}")
+            if info.country:
+                st.markdown(f"**País:** {info.country}")
+            if info.employees is not None:
+                st.markdown(f"**Empleados:** {info.employees:,}")
+            if info.website:
+                st.markdown(f"**Web:** [{info.website}]({info.website})")
+            if info.dividend_yield is not None:
+                st.markdown(f"**Dividend Yield:** {info.dividend_yield * 100:.2f}%")
+
+        with col_desc:
+            if info.description:
+                preview = info.description[:300]
+                st.markdown(f"{preview}...")
+                with st.expander("Ver descripción completa"):
+                    st.write(info.description)
+            else:
+                st.info("Descripción no disponible.")
+
+        st.markdown("---")
+
+        self._render_external_links(info)
+
+    def _render_external_links(self, info: StockInfo) -> None:
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            st.link_button(
+                "📈 TradingView",
+                f"https://www.tradingview.com/symbols/{info.ticker}/",
+                width="stretch",
+            )
+        with c2:
+            st.link_button(
+                "🧠 AlphaSpread",
+                f"https://www.alphaspread.com/security/nasdaq/{info.ticker.lower()}/summary",
+                width="stretch",
+            )
+        with c3:
+            st.link_button(
+                "💡 Smart Investor",
+                "https://thesmartinvestortool.com",
+                width="stretch",
+            )
+
+    def _render_growth_subtab(self, metrics: FinancialMetrics) -> None:
         if metrics.revenue_billions and metrics.net_income_billions:
             fig = draw_plotly_grouped_bar_chart(
                 series={
@@ -243,9 +436,7 @@ class FinancialsTab(BaseTab):
                 with st.expander("¿Cómo leer este gráfico?"):
                     st.markdown(CHART_INSIGHTS["net_margin"])
 
-    # -- Tab 2: Cash Flow -----------------------------------------------------
-
-    def _render_cashflow_tab(self, metrics: FinancialMetrics) -> None:
+    def _render_cashflow_subtab(self, metrics: FinancialMetrics) -> None:
         if metrics.fcf_billions and metrics.net_income_billions:
             fig = draw_plotly_grouped_bar_chart(
                 series={
@@ -282,9 +473,7 @@ class FinancialsTab(BaseTab):
         elif not metrics.net_income_billions:
             st.info("Datos de Cash Flow no disponibles.")
 
-    # -- Tab 3: Salud Financiera ----------------------------------------------
-
-    def _render_health_tab(self, metrics: FinancialMetrics) -> None:
+    def _render_health_subtab(self, metrics: FinancialMetrics) -> None:
         col1, col2 = st.columns(2)
 
         with col1:
@@ -336,9 +525,9 @@ class FinancialsTab(BaseTab):
                 )
                 st.plotly_chart(fig, width="stretch")
 
-    # -- Tab 4: Retorno al Accionista -----------------------------------------
-
-    def _render_shareholder_tab(self, stock_service: StockDataFetcherProtocol) -> None:
+    def _render_shareholder_subtab(
+        self, stock_service: StockDataFetcherProtocol
+    ) -> None:
         col1, col2 = st.columns(2)
         with col1:
             self._render_dividends_chart(stock_service)
@@ -436,29 +625,7 @@ class FinancialsTab(BaseTab):
         with st.expander("¿Cómo leer este gráfico?"):
             st.markdown(CHART_INSIGHTS["eps"])
 
-    # -- Tabla de datos -------------------------------------------------------
-
-    # Income statement rows in funnel order: revenue -> costs -> profits -> per-share
-    _INCOME_ROWS: list[tuple[str, str, bool]] = [
-        # (yfinance_key, spanish_label, is_highlight)
-        ("Total Revenue", "Ingresos Totales", True),
-        ("Cost Of Revenue", "Coste de Ventas", False),
-        ("Gross Profit", "Beneficio Bruto", True),
-        ("_margin_gross", "  Margen Bruto (%)", False),
-        ("Research And Development", "I+D", False),
-        ("Selling General And Administration", "SG&A", False),
-        ("Operating Income", "Resultado Operativo (EBIT)", True),
-        ("_margin_operating", "  Margen Operativo (%)", False),
-        ("Interest Expense", "Gastos Financieros", False),
-        ("Pretax Income", "Resultado antes de Impuestos", False),
-        ("Tax Provision", "Impuestos", False),
-        ("Net Income", "Beneficio Neto", True),
-        ("_margin_net", "  Margen Neto (%)", False),
-        ("EBITDA", "EBITDA", True),
-        ("Diluted EPS", "EPS Diluido", False),
-    ]
-
-    def _render_data_table(self, stock_service: StockDataFetcherProtocol) -> None:
+    def _render_results_subtab(self, stock_service: StockDataFetcherProtocol) -> None:
         st.subheader("Estado de Resultados")
         df = stock_service.get_financials()
         if df is None or df.empty:
@@ -468,8 +635,26 @@ class FinancialsTab(BaseTab):
         years = [str(c)[:4] for c in df.columns]
         revenue = df.loc["Total Revenue"] if "Total Revenue" in df.index else None
 
+        income_rows: list[tuple[str, str, bool]] = [
+            ("Total Revenue", "Ingresos Totales", True),
+            ("Cost Of Revenue", "Coste de Ventas", False),
+            ("Gross Profit", "Beneficio Bruto", True),
+            ("_margin_gross", "  Margen Bruto (%)", False),
+            ("Research And Development", "I+D", False),
+            ("Selling General And Administration", "SG&A", False),
+            ("Operating Income", "Resultado Operativo (EBIT)", True),
+            ("_margin_operating", "  Margen Operativo (%)", False),
+            ("Interest Expense", "Gastos Financieros", False),
+            ("Pretax Income", "Resultado antes de Impuestos", False),
+            ("Tax Provision", "Impuestos", False),
+            ("Net Income", "Beneficio Neto", True),
+            ("_margin_net", "  Margen Neto (%)", False),
+            ("EBITDA", "EBITDA", True),
+            ("Diluted EPS", "EPS Diluido", False),
+        ]
+
         rows: list[tuple[str, list[str], bool]] = []
-        for key, label, is_bold in self._INCOME_ROWS:
+        for key, label, is_bold in income_rows:
             if key.startswith("_margin_"):
                 row_values = self._calc_margin_row(key, df, revenue)
                 if row_values is None:
@@ -486,11 +671,9 @@ class FinancialsTab(BaseTab):
             st.info("Datos del estado de resultados no disponibles.")
             return
 
-        # Add YoY column for the most recent year
         yoy_values = self._calc_yoy_column(df, rows)
         header = ["Concepto"] + years + ["YoY %"]
 
-        # Build cell data
         cell_labels = []
         cell_columns: list[list[str]] = [[] for _ in range(len(years) + 1)]
         fill_colors: list[list[str]] = []
@@ -504,7 +687,6 @@ class FinancialsTab(BaseTab):
             )
             text_color = "#888888" if is_margin else "#1a1a2e" if is_bold else "#2c3e50"
 
-            # Prepend marker to highlight rows visually
             display_label = f"▸ {label}" if is_bold else label
             cell_labels.append(display_label)
             row_bg = [base_bg]
@@ -588,8 +770,26 @@ class FinancialsTab(BaseTab):
     def _calc_yoy_column(
         self, df: pd.DataFrame, rows: list[tuple[str, list[str], bool]]
     ) -> list[str]:
+        income_rows: list[tuple[str, str, bool]] = [
+            ("Total Revenue", "Ingresos Totales", True),
+            ("Cost Of Revenue", "Coste de Ventas", False),
+            ("Gross Profit", "Beneficio Bruto", True),
+            ("_margin_gross", "  Margen Bruto (%)", False),
+            ("Research And Development", "I+D", False),
+            ("Selling General And Administration", "SG&A", False),
+            ("Operating Income", "Resultado Operativo (EBIT)", True),
+            ("_margin_operating", "  Margen Operativo (%)", False),
+            ("Interest Expense", "Gastos Financieros", False),
+            ("Pretax Income", "Resultado antes de Impuestos", False),
+            ("Tax Provision", "Impuestos", False),
+            ("Net Income", "Beneficio Neto", True),
+            ("_margin_net", "  Margen Neto (%)", False),
+            ("EBITDA", "EBITDA", True),
+            ("Diluted EPS", "EPS Diluido", False),
+        ]
+
         yoy_values = []
-        for key, label, _bold in self._INCOME_ROWS:
+        for key, label, _bold in income_rows:
             matching = [r for r in rows if r[0] == label]
             if not matching:
                 continue

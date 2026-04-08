@@ -97,6 +97,125 @@ def render_price_history_chart(
     st.plotly_chart(fig, width="stretch")
 
 
+def render_price_eps_chart(
+    hist: pd.DataFrame,
+    eps_series: pd.Series | None,
+    currency: str,
+    frequency: str = "quarterly",
+    benchmark: pd.DataFrame | None = None,
+    benchmark_label: str = "S&P 500",
+) -> None:
+    """Render a combo chart: EPS bars (background) + price line (foreground).
+
+    Inspired by AlphaSpread's overview chart. The EPS bars sit on a hidden
+    secondary axis so the price line dominates visually. Optionally overlays
+    a normalized benchmark line (e.g. S&P 500) for comparison.
+    """
+    if hist.empty:
+        st.warning("No hay datos históricos para este periodo.")
+        return
+
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+    # -- EPS bars (background) on hidden left axis ----------------------
+    if eps_series is not None and not eps_series.empty:
+        eps_dates = pd.to_datetime(eps_series.index)
+        # bar width in milliseconds; quarterly ≈ 60d, annual ≈ 250d
+        bar_width_ms = (
+            60 * 24 * 3600 * 1000
+            if frequency == "quarterly"
+            else 250 * 24 * 3600 * 1000
+        )
+        fig.add_trace(
+            go.Bar(
+                x=eps_dates,
+                y=eps_series.values,
+                name="EPS",
+                marker_color="rgba(120,140,180,0.22)",
+                marker_line_width=0,
+                width=bar_width_ms,
+                text=[f"{v:.2f}" for v in eps_series.values],
+                textposition="outside",
+                textfont={"size": 11, "color": "#5f6c7b"},
+                hovertemplate="%{x|%b %Y}<br>EPS: %{y:.2f}<extra></extra>",
+            ),
+            secondary_y=False,
+        )
+        # Generous range so bars sit at the bottom and leave room for labels
+        max_eps = float(max(eps_series.values))
+        fig.update_yaxes(
+            range=[0, max_eps * 1.5],
+            showgrid=False,
+            showticklabels=False,
+            secondary_y=False,
+        )
+
+    # -- Price line (foreground) on visible right axis ------------------
+    fig.add_trace(
+        go.Scatter(
+            x=hist.index,
+            y=hist["Close"],
+            mode="lines",
+            name="Precio",
+            line={"color": COLOR_PRICE_LINE, "width": 2},
+            fill="tozeroy",
+            fillcolor="rgba(31,119,180,0.08)",
+            hovertemplate="%{x|%d %b %Y}<br>%{y:,.2f} " + currency + "<extra></extra>",
+        ),
+        secondary_y=True,
+    )
+    fig.update_yaxes(
+        title_text=f"Precio ({currency})",
+        showgrid=True,
+        gridcolor="rgba(200,200,200,0.25)",
+        secondary_y=True,
+    )
+
+    # -- Optional benchmark line (normalized to start of price) ---------
+    if benchmark is not None and not benchmark.empty and not hist.empty:
+        b_close = benchmark["Close"]
+        b_start = float(b_close.iloc[0])
+        h_start = float(hist["Close"].iloc[0])
+        if b_start != 0:
+            normalized = b_close / b_start * h_start
+            fig.add_trace(
+                go.Scatter(
+                    x=benchmark.index,
+                    y=normalized,
+                    mode="lines",
+                    name=benchmark_label,
+                    line={"color": "#888888", "width": 1.4, "dash": "dot"},
+                    hovertemplate="%{x|%d %b %Y}<br>"
+                    + benchmark_label
+                    + " (norm): %{y:,.2f}<extra></extra>",
+                ),
+                secondary_y=True,
+            )
+
+    fig.update_xaxes(
+        showgrid=False,
+        rangeslider={"visible": False},
+    )
+    fig.update_layout(
+        hovermode="x unified",
+        height=500,
+        margin={"l": 0, "r": 0, "t": 30, "b": 0},
+        showlegend=benchmark is not None,
+        legend={
+            "orientation": "h",
+            "yanchor": "bottom",
+            "y": 1.02,
+            "xanchor": "right",
+            "x": 1,
+        },
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        bargap=0.15,
+    )
+
+    st.plotly_chart(fig, width="stretch")
+
+
 def render_52_week_range(
     price: float,
     low: float | None,

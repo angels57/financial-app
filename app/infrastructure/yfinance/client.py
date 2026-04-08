@@ -126,6 +126,36 @@ class YFinanceClient:
             "cashflow", lambda: self._yf.cashflow, force_refresh
         )
 
+    def get_quarterly_financials(
+        self, force_refresh: bool = False
+    ) -> pd.DataFrame | None:
+        """Fetch quarterly income statement (used for EPS-vs-price chart)."""
+        return self._cached_statement(
+            "quarterly_financials",
+            lambda: self._yf.quarterly_financials,
+            force_refresh,
+        )
+
+    def get_eps_series(
+        self, frequency: str = "quarterly", force_refresh: bool = False
+    ) -> pd.Series | None:
+        """Return Diluted EPS series for chart overlay.
+
+        Args:
+            frequency: "quarterly" or "annual".
+        """
+        if frequency == "quarterly":
+            df = self.get_quarterly_financials(force_refresh=force_refresh)
+        elif frequency == "annual":
+            df = self.get_financials(force_refresh=force_refresh)
+        else:
+            raise ValueError(f"Unknown frequency: {frequency}")
+
+        if df is None or "Diluted EPS" not in df.index:
+            return None
+        series = df.loc["Diluted EPS"].dropna()
+        return series if not series.empty else None
+
     def _cached_statement(
         self,
         name: str,

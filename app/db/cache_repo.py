@@ -132,7 +132,14 @@ class CacheRepository:
             ).fetchone()
         if row is None:
             return None
-        return pd.read_json(StringIO(json.dumps(row[0])))
+        df = pd.read_json(StringIO(json.dumps(row[0])))
+        # JSONB normaliza el orden de las claves alfabéticamente, así que las
+        # columnas (fechas) quedan en orden ascendente. yfinance las entrega
+        # descendentes (más recientes primero) y el calculator asume ese orden,
+        # así que las reordenamos al leer.
+        if not df.empty:
+            df = df.sort_index(axis=1, ascending=False)
+        return df
 
     def upsert_financial_statement(
         self, ticker: str, statement: str, df: pd.DataFrame, source: str

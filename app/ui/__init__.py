@@ -3,19 +3,17 @@
 from ui.sidebar import render_sidebar
 from ui.tabs import (
     BaseTab,
-    FinancialsTab,
     NewsTab,
+    OverviewTab,
     PricesTab,
-    SummaryTab,
     TechnicalTab,
 )
 
 __all__ = [
     "BaseTab",
-    "FinancialsTab",
     "NewsTab",
+    "OverviewTab",
     "PricesTab",
-    "SummaryTab",
     "TechnicalTab",
     "render_sidebar",
 ]

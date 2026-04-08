@@ -38,6 +38,18 @@ class StockDataFetcherProtocol(Protocol):
         """Fetch cash flow statement."""
         ...
 
+    def get_quarterly_financials(
+        self, force_refresh: bool = False
+    ) -> pd.DataFrame | None:
+        """Fetch quarterly income statement."""
+        ...
+
+    def get_eps_series(
+        self, frequency: str = "quarterly", force_refresh: bool = False
+    ) -> pd.Series | None:
+        """Return Diluted EPS series (quarterly or annual)."""
+        ...
+
     def get_dividends(self, force_refresh: bool = False) -> pd.DataFrame | None:
         """Fetch dividend history."""
         ...
@@ -95,6 +107,14 @@ class StockDataServiceProtocol(Protocol):
     def get_balance_sheet(self, force_refresh: bool = False) -> pd.DataFrame | None: ...
 
     def get_cashflow(self, force_refresh: bool = False) -> pd.DataFrame | None: ...
+
+    def get_quarterly_financials(
+        self, force_refresh: bool = False
+    ) -> pd.DataFrame | None: ...
+
+    def get_eps_series(
+        self, frequency: str = "quarterly", force_refresh: bool = False
+    ) -> pd.Series | None: ...
 
     def get_dividends(self, force_refresh: bool = False) -> pd.DataFrame | None: ...
 

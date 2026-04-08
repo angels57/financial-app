@@ -11,10 +11,9 @@ from db.cache_repo import CacheRepository
 from domain.services import FinancialCalculator
 from infrastructure.yfinance import YFinanceClient
 from ui import (
-    FinancialsTab,
     NewsTab,
+    OverviewTab,
     PricesTab,
-    SummaryTab,
     TechnicalTab,
     render_sidebar,
 )
@@ -34,6 +33,42 @@ def _init_database() -> CacheRepository | None:
 def main() -> None:
     st.set_page_config(
         page_title="Financial Stre", layout="wide", initial_sidebar_state="expanded"
+    )
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stSpinner"] {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(14, 17, 23, 0.75);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            margin: 0;
+            padding: 0;
+        }
+        div[data-testid="stSpinner"] > div {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            color: #fafafa;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        div[data-testid="stSpinner"] i {
+            width: 3rem !important;
+            height: 3rem !important;
+            border-width: 4px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
     )
     init_monitoring(dsn=settings.sentry_dsn, environment=settings.environment)
 
@@ -70,8 +105,7 @@ def main() -> None:
             )
 
             tabs = [
-                SummaryTab(title="📊 Resumen"),
-                FinancialsTab(title="📈 Finanzas"),
+                OverviewTab(title="📊 Overview"),
                 PricesTab(title="💰 Precios"),
                 TechnicalTab(title="🔬 Análisis Técnico"),
                 NewsTab(title="📰 Noticias"),
