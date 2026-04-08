@@ -28,6 +28,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      PYTHONPATH: /app
       DB_URL: postgresql://finapp:finapp_local@db:5432/financial_stre
       ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-}
 
