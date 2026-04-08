@@ -5,7 +5,7 @@ from contextlib import suppress
 
 from playwright.sync_api import sync_playwright
 
-from core.logging import get_app_logger
+from app.core.logging import get_app_logger
 
 logger = get_app_logger("GuruFocusScraper")
 

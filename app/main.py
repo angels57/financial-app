@@ -4,7 +4,7 @@ import psycopg
 import streamlit as st
 from yfinance.exceptions import YFException
 
-from app.config import settings
+from app.config.settings import settings
 from app.core import get_app_logger, init_monitoring
 from app.db import get_pool, init_db
 from app.db.cache_repo import CacheRepository
@@ -14,6 +14,7 @@ from app.ui import (
     NewsTab,
     OverviewTab,
     PricesTab,
+    ResearchTab,
     TechnicalTab,
     render_sidebar,
 )
@@ -109,6 +110,7 @@ def main() -> None:
                 PricesTab(title="💰 Precios"),
                 TechnicalTab(title="🔬 Análisis Técnico"),
                 NewsTab(title="📰 Noticias"),
+                ResearchTab(title="🔬 Research"),
             ]
 
             st_tabs = st.tabs([t.title for t in tabs])

@@ -38,3 +38,8 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["app"]
+
+
+# Evita que pyright lance errores por imports faltantes
+[tool.pyright]
+reportMissingImports = false

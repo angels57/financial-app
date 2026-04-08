@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 from typing import TypedDict
 
-from models import FinancialMetrics, StockInfo
-from domain.services.protocols import StockDataFetcherProtocol
+from app.domain.models import FinancialMetrics, StockInfo
+from app.domain.services.protocols import StockDataFetcherProtocol
 
 
 class RenderKwargs(TypedDict, total=False):

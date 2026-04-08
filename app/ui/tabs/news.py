@@ -6,8 +6,8 @@ from typing import Any
 
 import streamlit as st
 
-from domain.services.protocols import StockDataFetcherProtocol
-from ui.tabs.base import BaseTab
+from app.domain.services.protocols import StockDataFetcherProtocol
+from app.ui.tabs.base import BaseTab
 
 
 class NewsTab(BaseTab):
@@ -16,8 +16,11 @@ class NewsTab(BaseTab):
     def __init__(self, title: str) -> None:
         super().__init__(title)
 
-    def render(self, *, stock_service: StockDataFetcherProtocol, **kwargs: Any) -> None:
-        st.subheader(f"Últimas Noticias de {stock_service.ticker}")
+    def render(self, **kwargs: Any) -> None:
+        stock_service: StockDataFetcherProtocol = kwargs["stock_service"]
+        ticker: str = kwargs["ticker"]
+
+        st.subheader(f"Últimas Noticias de {ticker}")
         news = stock_service.get_news()
 
         if not news:

@@ -4,7 +4,7 @@ import logging
 
 from psycopg_pool import ConnectionPool
 
-from app.config import settings
+from app.config.settings import settings
 
 logger = logging.getLogger(__name__)
 

@@ -1,12 +1,13 @@
 """User interface components for the dashboard."""
 
-from ui.sidebar import render_sidebar
-from ui.tabs import (
+from app.ui.sidebar import render_sidebar
+from app.ui.tabs import (
     BaseTab,
     NewsTab,
     OverviewTab,
     PricesTab,
     TechnicalTab,
+    ResearchTab,
 )
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "OverviewTab",
     "PricesTab",
     "TechnicalTab",
+    "ResearchTab",
     "render_sidebar",
 ]

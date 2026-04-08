@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-
+import logging
 from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.domain.services import get_llm
+
+logger = logging.getLogger(__name__)
 
 SYSTEM_PROMPT = """Eres un analista financiero experto.
   Analiza el ticker dado y genera un reporte estructurado con exactamente estos 10 puntos:
@@ -31,12 +33,20 @@ def generate_report(
 ) -> Iterator[str]:
     """Genera el reporte con streaming. Yields chunks de texto."""
 
-    llm = get_llm()
+    logger.info(f"Generando reporte para ticker: {ticker}")
+
+    llm = get_llm(provider, model)
     # Añadir herramienta de búsqueda si el modelo soporta tool calling
     try:
         search_tool = DuckDuckGoSearchRun()
         llm_with_tools = llm.bind_tools([search_tool])
     except NotImplementedError:
+        llm_with_tools = llm
+        logger.warning(
+            "El modelo no soporta tool calling, se generará el reporte sin herramientas"
+        )
+    except Exception as e:
+        logger.error(f"Error al añadir herramientas: {e}")
         llm_with_tools = llm
 
     messages = [

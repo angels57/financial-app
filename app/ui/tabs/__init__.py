@@ -4,6 +4,7 @@ from app.ui.tabs.base import BaseTab
 from app.ui.tabs.news import NewsTab
 from app.ui.tabs.overview import OverviewTab
 from app.ui.tabs.prices import PricesTab
+from app.ui.tabs.research import ResearchTab
 from app.ui.tabs.technical import TechnicalTab
 
 __all__ = [
@@ -11,5 +12,6 @@ __all__ = [
     "NewsTab",
     "OverviewTab",
     "PricesTab",
+    "ResearchTab",
     "TechnicalTab",
 ]

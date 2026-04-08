@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
+
 from langchain_core.language_models import BaseChatModel
 from typing import cast
 from app.config.settings import settings
 
+logger = logging.getLogger(__name__)
 
 _PROVIDER_MODELS: dict[str, list[str]] = {
     "ollama": ["llama3.1", "llama3.2", "qwen2.5", "mistral"],
@@ -26,6 +29,8 @@ def get_llm(provider: str | None = None, model: str | None = None) -> BaseChatMo
         case "ollama":
             from langchain_ollama import ChatOllama
 
+            logger.info(f"Usando Ollama con modelo: {model}")
+
             return cast(
                 BaseChatModel,
                 ChatOllama(
@@ -37,6 +42,8 @@ def get_llm(provider: str | None = None, model: str | None = None) -> BaseChatMo
 
         case "gemini":
             from langchain_google_genai import ChatGoogleGenerativeAI
+
+            logger.info(f"Usando Gemini con modelo: {model}")
 
             return cast(
                 BaseChatModel,
@@ -50,6 +57,8 @@ def get_llm(provider: str | None = None, model: str | None = None) -> BaseChatMo
         case "openai":
             from langchain_openai import ChatOpenAI
 
+            logger.info(f"Usando OpenAI con modelo: {model}")
+
             return cast(
                 BaseChatModel,
                 ChatOpenAI(
@@ -61,6 +70,8 @@ def get_llm(provider: str | None = None, model: str | None = None) -> BaseChatMo
 
         case "huggingface":
             from langchain_huggingface import HuggingFaceEndpoint
+
+            logger.info(f"Usando HuggingFace con modelo: {model}")
 
             return cast(
                 BaseChatModel,

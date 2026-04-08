@@ -6,13 +6,13 @@ import os
 
 from rich.logging import RichHandler
 
-from app.config import settings
+from app.config.settings import settings
 
 
 class JSONFormatter(logging.Formatter):
     """Formateador de logs en formato JSON."""
 
-    def format(self, record):
+    def format(self, record: logging.LogRecord) -> str:
         log_record = {
             "timestamp": self.formatTime(record),
             "level": record.levelname,

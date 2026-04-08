@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from plotly.subplots import make_subplots
 
-from ui.theme import (
+from app.ui.theme import (
     COLOR_GROWTH_NEGATIVE,
     COLOR_GROWTH_POSITIVE,
     COLOR_HLINE_MID,

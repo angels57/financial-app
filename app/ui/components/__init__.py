@@ -1,13 +1,13 @@
 """Reusable UI components for the dashboard."""
 
-from ui.components.badges import render_diff_badge
-from ui.components.charts import (
+from app.ui.components.badges import render_diff_badge
+from app.ui.components.charts import (
     render_52_week_range,
     render_price_eps_chart,
     render_price_history_chart,
 )
-from ui.components.layout import metric_row, section_divider
-from ui.components.period_selector import (
+from app.ui.components.layout import metric_row, section_divider
+from app.ui.components.period_selector import (
     calc_period_pct_change,
     render_period_pills,
     slice_history_to_period,
@@ -23,4 +23,5 @@ __all__ = [
     "metric_row",
     "section_divider",
     "slice_history_to_period",
+    "render_diff_badge",
 ]

@@ -8,9 +8,9 @@ import psycopg
 import streamlit as st
 
 if TYPE_CHECKING:
-    from db.cache_repo import CacheRepository
+    from app.db.cache_repo import CacheRepository
 
-from domain.validators import validate_ticker
+from app.domain.validators import validate_ticker
 
 
 def render_sidebar(cache_repo: CacheRepository | None = None) -> tuple[str, str]:
