@@ -6,7 +6,7 @@ import math
 
 import pandas as pd
 
-from domain.models import FinancialMetrics
+from app.domain.models import FinancialMetrics
 
 
 class FinancialCalculator:

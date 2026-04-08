@@ -20,6 +20,10 @@ dependencies = [
     "yfinance>=1.2.0",
     "langchain-core>=1.2.27",
     "langchain-community>=0.4.1",
+    "langchain-ollama>=1.1.0",
+    "langchain-google-genai>=4.2.1",
+    "langchain-openai>=1.1.12",
+    "langchain-huggingface>=1.2.1",
 ]
 
 [dependency-groups]

@@ -31,14 +31,11 @@ class TechnicalTab(BaseTab):
     SMA_PERIODS = [50, 100, 200]
     RSI_PERIOD = 14
 
-    def render(
-        self,
-        *,
-        stock_service: StockDataServiceProtocol,
-        info: StockInfo,
-        period: str,
-        **kwargs: Any,
-    ) -> None:
+    def render(self, **kwargs: Any) -> None:
+        stock_service: StockDataServiceProtocol = kwargs["stock_service"]
+        info: StockInfo = kwargs["info"]
+        period: str = kwargs["period"]
+
         st.subheader("Análisis Técnico")
 
         if "tech_source" not in st.session_state:

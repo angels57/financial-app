@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -127,16 +128,12 @@ def _cagr_badges(
 class OverviewTab(BaseTab):
     """Renderiza el tab de overview con hero card, KPIs y sub-tabs."""
 
-    def render(
-        self,
-        *,
-        stock_service: StockDataFetcherProtocol,
-        info: StockInfo,
-        period: str,  # noqa: ARG002 — kept for protocol compatibility
-        ticker: str,
-        metrics: FinancialMetrics,
-        **kwargs: object,
-    ) -> None:
+    def render(self, **kwargs: Any) -> None:
+        stock_service: StockDataFetcherProtocol = kwargs["stock_service"]
+        info: StockInfo = kwargs["info"]
+        ticker: str = kwargs["ticker"]
+        metrics: FinancialMetrics = kwargs["metrics"]
+
         self._render_hero(info)
         st.markdown("---")
         self._render_combo_chart_section(stock_service, info)
