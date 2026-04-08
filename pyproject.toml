@@ -24,6 +24,7 @@ dependencies = [
     "langchain-google-genai>=4.2.1",
     "langchain-openai>=1.1.12",
     "langchain-huggingface>=1.2.1",
+    "ddgs>=9.13.0",
 ]
 
 [dependency-groups]

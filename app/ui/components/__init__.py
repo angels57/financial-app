@@ -23,5 +23,4 @@ __all__ = [
     "metric_row",
     "section_divider",
     "slice_history_to_period",
-    "render_diff_badge",
 ]
