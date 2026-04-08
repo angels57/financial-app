@@ -15,6 +15,14 @@ class Settings(BaseSettings):
     log_file: str = "logs/app.json"
     sentry_dsn: str = ""
     environment: str = "development"
+    research_provider: str = "openai"  # ollama | gemini | openai | huggingface
+    research_model: str = "gpt-4o-mini"  # depende del provider
+    research_temperature: float = 0.3
+    research_max_tokens: int = 4000
+    # API keys opcionales según provider
+    gemini_api_key: str = ""
+    openai_api_key: str = ""
+    hf_token: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

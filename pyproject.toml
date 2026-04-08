@@ -18,6 +18,8 @@ dependencies = [
     "streamlit>=1.56.0",
     "watchdog>=6.0.0",
     "yfinance>=1.2.0",
+    "langchain-core>=1.2.27",
+    "langchain-community>=0.4.1",
 ]
 
 [dependency-groups]

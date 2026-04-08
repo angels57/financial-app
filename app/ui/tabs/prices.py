@@ -15,7 +15,7 @@ from ui.components import render_diff_badge
 class PricesTab(BaseTab):
     """Calcula precios de compra y futuros según múltiplos financieros."""
 
-    def render(self, *, info: StockInfo, **kwargs: Any) -> None:
+    def render(self, *, info: StockInfo, **kwargs: Any) -> None:  # type: ignore[override]
         t = info.ticker
         (
             per_default,

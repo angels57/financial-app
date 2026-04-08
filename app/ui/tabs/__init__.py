@@ -1,10 +1,10 @@
 """Tab implementations for the dashboard."""
 
-from ui.tabs.base import BaseTab
-from ui.tabs.news import NewsTab
-from ui.tabs.overview import OverviewTab
-from ui.tabs.prices import PricesTab
-from ui.tabs.technical import TechnicalTab
+from app.ui.tabs.base import BaseTab
+from app.ui.tabs.news import NewsTab
+from app.ui.tabs.overview import OverviewTab
+from app.ui.tabs.prices import PricesTab
+from app.ui.tabs.technical import TechnicalTab
 
 __all__ = [
     "BaseTab",

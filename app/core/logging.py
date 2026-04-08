@@ -6,7 +6,7 @@ import os
 
 from rich.logging import RichHandler
 
-from config import settings
+from app.config import settings
 
 
 class JSONFormatter(logging.Formatter):

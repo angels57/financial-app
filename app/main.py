@@ -4,13 +4,13 @@ import psycopg
 import streamlit as st
 from yfinance.exceptions import YFException
 
-from config import settings
-from core import get_app_logger, init_monitoring
-from db import get_pool, init_db
-from db.cache_repo import CacheRepository
-from domain.services import FinancialCalculator
-from infrastructure.yfinance import YFinanceClient
-from ui import (
+from app.config import settings
+from app.core import get_app_logger, init_monitoring
+from app.db import get_pool, init_db
+from app.db.cache_repo import CacheRepository
+from app.domain.services import FinancialCalculator
+from app.infrastructure.yfinance import YFinanceClient
+from app.ui import (
     NewsTab,
     OverviewTab,
     PricesTab,

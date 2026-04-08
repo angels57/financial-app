@@ -8,7 +8,7 @@ from io import StringIO
 import pandas as pd
 from psycopg_pool import ConnectionPool
 
-from models import NewsItem, StockInfo
+from app.domain.models import NewsItem, StockInfo
 
 logger = logging.getLogger(__name__)
 
