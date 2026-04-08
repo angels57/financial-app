@@ -3,6 +3,7 @@
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import SecretStr
 
 
 class Settings(BaseSettings):
@@ -20,8 +21,8 @@ class Settings(BaseSettings):
     research_temperature: float = 0.3
     research_max_tokens: int = 4000
     # API keys opcionales según provider
-    gemini_api_key: str = ""
-    openai_api_key: str = ""
+    gemini_api_key: SecretStr = SecretStr("")
+    openai_api_key: SecretStr = SecretStr("")
     hf_token: str = ""
 
     model_config = SettingsConfigDict(

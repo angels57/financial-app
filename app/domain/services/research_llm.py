@@ -9,9 +9,9 @@ from app.config.settings import settings
 logger = logging.getLogger(__name__)
 
 _PROVIDER_MODELS: dict[str, list[str]] = {
+    "openai": ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
     "ollama": ["llama3.1", "llama3.2", "qwen2.5", "mistral"],
     "gemini": ["gemini-2.5-flash", "gemini-2.5-pro"],
-    "openai": ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo"],
     "huggingface": [
         "meta-llama/Llama-3.1-8B-Instruct",
         "mistralai/Mistral-7B-Instruct-v0.2",
@@ -76,7 +76,7 @@ def get_llm(provider: str | None = None, model: str | None = None) -> BaseChatMo
             return cast(
                 BaseChatModel,
                 HuggingFaceEndpoint(
-                    repo_id=model,
+                    model=model,
                     huggingfacehub_api_token=settings.hf_token,
                     temperature=settings.research_temperature,
                 ),

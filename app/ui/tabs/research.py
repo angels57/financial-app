@@ -3,11 +3,13 @@ from __future__ import annotations
 import streamlit as st
 
 from typing import Any
-
+import logging
 from app.domain.models import StockInfo, FinancialMetrics
 from app.domain.services import research_service, all_providers, available_models
 from app.ui.tabs.base import BaseTab
 from app.utils import format_large_number
+
+logger = logging.getLogger(__name__)
 
 
 class ResearchTab(BaseTab):
@@ -67,22 +69,18 @@ class ResearchTab(BaseTab):
                         provider=provider,
                         model=model,
                     ):
+                        logger.info(f"Chunk: {chunk}")
                         report_text += chunk
                         placeholder.markdown(report_text)
                     status.update(label="Reporte completado", state="complete")
-                    st.session_state[cache_key] = report_text
+                # st.session_state[cache_key] = report_text
                 except Exception as e:
                     status.update(label="Error", state="error")
                     st.error(f"Error: {e}")
+                    logger.error(f"Error al generar reporte: {e}")
         # -- Mostrar reporte cacheado ------------------------------------
         elif cache_key in st.session_state:
             st.markdown(st.session_state[cache_key])
-            st.download_button(
-                "Descargar .md",
-                data=st.session_state[cache_key],
-                file_name=f"{info.ticker}_research.md",
-                mime="text/markdown",
-            )
 
     @staticmethod
     def _build_context(info: StockInfo, metrics: FinancialMetrics) -> str:

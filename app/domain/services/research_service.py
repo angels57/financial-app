@@ -56,4 +56,5 @@ def generate_report(
 
     for chunk in llm_with_tools.stream(messages):
         if chunk.content:
+            logger.info(f"Chunk: {chunk}")
             yield str(chunk.content)
