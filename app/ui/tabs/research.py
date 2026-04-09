@@ -56,7 +56,6 @@ class ResearchTab(BaseTab):
         if generate and cache_key not in st.session_state:
             context = self._build_context(info, metrics)
             report_text = ""
-            placeholder = st.empty()
 
             with st.status(
                 f"Investigando {info.ticker} con {model}...", expanded=True
@@ -69,15 +68,15 @@ class ResearchTab(BaseTab):
                         provider=provider,
                         model=model,
                     ):
-                        logger.info(f"Chunk: {chunk}")
                         report_text += chunk
-                        placeholder.markdown(report_text)
                     status.update(label="Reporte completado", state="complete")
-                # st.session_state[cache_key] = report_text
+                    st.session_state[cache_key] = report_text
                 except Exception as e:
                     status.update(label="Error", state="error")
                     st.error(f"Error: {e}")
                     logger.error(f"Error al generar reporte: {e}")
+            placeholder = st.empty()
+            placeholder.markdown(report_text)
         # -- Mostrar reporte cacheado ------------------------------------
         elif cache_key in st.session_state:
             st.markdown(st.session_state[cache_key])
