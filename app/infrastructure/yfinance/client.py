@@ -11,13 +11,15 @@ import psycopg
 import yfinance as yf
 from yfinance.exceptions import YFException
 
-from domain.models import NewsItem, StockInfo
-from domain.validators import require_valid_ticker
-from infrastructure.yfinance.mapper import YFinanceMapper
-from infrastructure.yfinance.yfinance_technical_service import YfinanceTechnicalService
+from app.domain.models import NewsItem, StockInfo
+from app.domain.validators import require_valid_ticker
+from app.infrastructure.yfinance.mapper import YFinanceMapper
+from app.infrastructure.yfinance.yfinance_technical_service import (
+    YfinanceTechnicalService,
+)
 
 if TYPE_CHECKING:
-    from db.cache_repo import CacheRepository
+    from app.db.cache_repo import CacheRepository
 
 logger = logging.getLogger(__name__)
 
@@ -38,13 +40,14 @@ class YFinanceClient:
     def __init__(self, ticker: str, *, cache_repo: CacheRepository | None = None):
         validated: str = require_valid_ticker(ticker)
         self._ticker = validated
-        self._yf = yf.Ticker(validated)
+        self._yf = yf.Ticker(validated)  # type: ignore[attr-defined]
         self._mapper = YFinanceMapper()
         self._tech_service = YfinanceTechnicalService()
         self._tech_source = "yfinance"
         self._cache = cache_repo
 
     def set_technical_source(self, source: str) -> None:
+        """Set the technical source."""
         self._tech_source = source
 
     @property
@@ -82,7 +85,7 @@ class YFinanceClient:
         """Fetch price history, using DB cache when available."""
         if self._cache:
             try:
-                from config import settings
+                from app.config import settings
 
                 cached = self._cache.get_price_history(
                     self._ticker, period, settings.price_cache_ttl_seconds
@@ -277,7 +280,7 @@ class YFinanceClient:
         """Read-through cache for a single technical indicator."""
         if self._cache and not force_refresh:
             try:
-                from config import settings
+                from app.config import settings
 
                 cached = self._cache.get_technical_indicator(
                     self._ticker,

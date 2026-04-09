@@ -47,6 +47,7 @@ class FinancialCalculator:
         cashflow: pd.DataFrame | None,
         pe_ratio: float | None = None,
     ) -> FinancialMetrics:
+        """Calcula métricas financieras a partir de DataFrames."""
         metrics = FinancialMetrics(pe_ratio=pe_ratio)
         limit = self.YEARS_LIMIT
 

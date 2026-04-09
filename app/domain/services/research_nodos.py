@@ -1,5 +1,7 @@
 from typing import TypedDict
 from langgraph.graph import StateGraph, END, START
+from app.infrastructure.yfinance.client import YFinanceClient
+from app.domain.services import FinancialCalculator
 
 
 class ReportState(TypedDict):
@@ -15,7 +17,80 @@ class ReportState(TypedDict):
 
 def collect_data(state: ReportState) -> dict:
     """Recopila datos financieros de yfinance."""
-    return {}
+    ticker = state["ticker"]
+
+    # 1. Crear el cliente de yfinance (sin caché, es un proceso puntual)
+    client = YFinanceClient(ticker)
+
+    # 2. Obtener datos crudos
+    info = client.get_info()
+    finanials = client.get_financials()
+    balance = client.get_balance_sheet()
+    cashflow = client.get_cashflow()
+    dividends = client.get_dividends()
+
+    # 3. Calcular métricas derivadas con tu calculadora existente
+    calculator = FinancialCalculator()
+    metrics = calculator.compute(
+        financials=finanials,
+        balance=balance,
+        cashflow=cashflow,
+        pe_ratio=info.pe_ratio,
+    )
+    # 4. Construir un contexto rico en texto para los nodos siguientes
+
+    financial_data = f"""
+    === DATOS FINANCIEROS: {info.short_name} ({ticker}) ===
+
+    --- Información General ---
+    Nombre: {info.short_name}
+    Sector: {info.sector} | Industria: {info.industry}
+    País: {info.country}
+    Empleados: {info.employees}
+    Descripción: {info.description}
+    Web: {info.website}
+
+    --- Precio y Mercado ---
+    Precio Actual: {info.currency} {info.price:,.2f}
+    Market Cap: {info.market_cap:,.0f}
+    Volumen: {info.volume:,}
+    52-Week Low: {info.week_52_low}
+    52-Week High: {info.week_52_high}
+    Beta: {info.beta}
+
+    --- Valoración ---
+    P/E Ratio: {info.pe_ratio}
+    Forward P/E: {info.forward_pe}
+    Price/Sales: {info.price_to_sales}
+    Price/FCF: {info.price_to_fcf}
+    EPS: {info.eps}
+    Target Price (analistas): {info.target_price}
+    Recomendación: {info.recommendation}
+
+    --- Rentabilidad (series históricas) ---
+    Años: {metrics.years}
+    Revenue (B): {metrics.revenue_billions}
+    Net Income (B): {metrics.net_income_billions}
+    Sales Growth (%): {metrics.sales_growth}
+    Net Margin (%): {metrics.net_margin}
+    ROE (%): {metrics.roe}
+
+    --- Cash Flow ---
+    FCF (B): {metrics.fcf_billions}
+
+    --- Deuda ---
+    Deuda Total (B): {metrics.debt_billions}
+    Debt/Equity (%): {metrics.debt_equity}
+
+    --- Dividendos ---
+    Dividend Yield: {info.dividend_yield}
+    Historial: {dividends.to_string() if dividends is not None else "N/A"}
+
+    --- EPS Histórico ---
+    EPS por año: {metrics.eps}
+        """
+
+    return {"financial_data": financial_data}
 
 
 def research(state: ReportState) -> dict:
