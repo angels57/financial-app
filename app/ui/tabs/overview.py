@@ -11,6 +11,7 @@ import streamlit as st
 import yfinance as yf
 
 from app.domain.models import FinancialMetrics, StockInfo
+from app.domain.services import FinancialCalculator
 from app.domain.services.protocols import StockDataFetcherProtocol
 from app.ui.tabs.base import BaseTab
 from app.ui.theme import (
@@ -132,7 +133,19 @@ class OverviewTab(BaseTab):
         stock_service: StockDataFetcherProtocol = kwargs["stock_service"]
         info: StockInfo = kwargs["info"]
         ticker: str = kwargs["ticker"]
-        metrics: FinancialMetrics = kwargs["metrics"]
+        force_refresh: bool = bool(kwargs.get("force_refresh", False))
+
+        with st.spinner("Cargando datos financieros..."):
+            financials = stock_service.get_financials(force_refresh=force_refresh)
+            balance = stock_service.get_balance_sheet(force_refresh=force_refresh)
+            cashflow = stock_service.get_cashflow(force_refresh=force_refresh)
+
+        metrics: FinancialMetrics = FinancialCalculator().compute(
+            financials=financials,
+            balance=balance,
+            cashflow=cashflow,
+            pe_ratio=info.pe_ratio,
+        )
 
         self._render_hero(info)
         st.markdown("---")
@@ -233,7 +246,7 @@ class OverviewTab(BaseTab):
         benchmark_df: pd.DataFrame | None = None
         if compare_benchmark:
             benchmark_df = _fetch_benchmark_history(selected_period)
-            if benchmark_df.empty:
+            if benchmark_df is None or benchmark_df.empty:
                 st.warning("No se pudo cargar el S&P 500.")
                 benchmark_df = None
 

@@ -7,6 +7,7 @@ from app.ui.components.charts import (
     render_price_history_chart,
 )
 from app.ui.components.layout import metric_row, section_divider
+from app.ui.components.loading import fetch_with_spinner
 from app.ui.components.period_selector import (
     calc_period_pct_change,
     render_period_pills,
@@ -15,6 +16,7 @@ from app.ui.components.period_selector import (
 
 __all__ = [
     "calc_period_pct_change",
+    "fetch_with_spinner",
     "render_diff_badge",
     "render_52_week_range",
     "render_period_pills",

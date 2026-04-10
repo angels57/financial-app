@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TypedDict
 
-from app.domain.models import FinancialMetrics, StockInfo
+from app.domain.models import StockInfo
 from app.domain.services.protocols import StockDataFetcherProtocol
 
 
@@ -16,5 +16,5 @@ class RenderKwargs(TypedDict, total=False):
     info: StockInfo
     period: str
     ticker: str
-    metrics: FinancialMetrics
+    force_refresh: bool
     logger: logging.Logger

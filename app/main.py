@@ -8,7 +8,6 @@ from app.config.settings import settings
 from app.core import get_app_logger, init_monitoring
 from app.db import get_pool, init_db
 from app.db.cache_repo import CacheRepository
-from app.domain.services import FinancialCalculator
 from app.infrastructure.yfinance import YFinanceClient
 from app.ui import (
     NewsTab,
@@ -18,8 +17,19 @@ from app.ui import (
     TechnicalTab,
     render_sidebar,
 )
+from app.ui.tabs.base import BaseTab
 
 logger = get_app_logger("")
+
+
+def _render_tab_as_fragment(tab: BaseTab, **kwargs: object) -> None:
+    """Wrap a tab's safe_render in a @st.fragment so each tab re-renders independently."""
+
+    @st.fragment
+    def _inner() -> None:
+        tab.safe_render(**kwargs)
+
+    _inner()
 
 
 def _init_database() -> CacheRepository | None:
@@ -34,42 +44,6 @@ def _init_database() -> CacheRepository | None:
 def main() -> None:
     st.set_page_config(
         page_title="Financial Stre", layout="wide", initial_sidebar_state="expanded"
-    )
-    st.markdown(
-        """
-        <style>
-        div[data-testid="stSpinner"] {
-            position: fixed;
-            inset: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(14, 17, 23, 0.75);
-            backdrop-filter: blur(4px);
-            -webkit-backdrop-filter: blur(4px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            margin: 0;
-            padding: 0;
-        }
-        div[data-testid="stSpinner"] > div {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1rem;
-            color: #fafafa;
-            font-size: 1.1rem;
-            font-weight: 500;
-        }
-        div[data-testid="stSpinner"] i {
-            width: 3rem !important;
-            height: 3rem !important;
-            border-width: 4px !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
     )
     init_monitoring(dsn=settings.sentry_dsn, environment=settings.environment)
 
@@ -86,49 +60,43 @@ def main() -> None:
 
     force_refresh = st.session_state.pop("force_refresh", False)
 
-    with st.spinner(f"Cargando datos de {ticker}..."):
-        try:
-            stock_service = YFinanceClient(ticker, cache_repo=cache_repo)
-            calculator = FinancialCalculator()
+    try:
+        stock_service = YFinanceClient(ticker, cache_repo=cache_repo)
+
+        with st.spinner(f"Verificando {ticker}..."):
             info = stock_service.get_info(force_refresh=force_refresh)
 
-            if info.price is None:
-                st.error(f"No se pudo encontrar el precio para: {ticker}")
-                return
+        if info.price is None:
+            st.error(f"No se pudo encontrar el precio para: {ticker}")
+            return
 
-            st.title(f"{info.short_name} ({ticker})")
+        st.title(f"{info.short_name} ({ticker})")
 
-            metrics = calculator.compute(
-                financials=stock_service.get_financials(force_refresh=force_refresh),
-                balance=stock_service.get_balance_sheet(force_refresh=force_refresh),
-                cashflow=stock_service.get_cashflow(force_refresh=force_refresh),
-                pe_ratio=info.pe_ratio,
-            )
+        tabs = [
+            OverviewTab(title="📊 Overview"),
+            PricesTab(title="💰 Precios"),
+            TechnicalTab(title="🔬 Análisis Técnico"),
+            NewsTab(title="📰 Noticias"),
+            ResearchTab(title="🔬 Research"),
+        ]
 
-            tabs = [
-                OverviewTab(title="📊 Overview"),
-                PricesTab(title="💰 Precios"),
-                TechnicalTab(title="🔬 Análisis Técnico"),
-                NewsTab(title="📰 Noticias"),
-                ResearchTab(title="🔬 Research"),
-            ]
+        st_tabs = st.tabs([t.title for t in tabs])
+        for tab, st_tab in zip(tabs, st_tabs):
+            with st_tab:
+                _render_tab_as_fragment(
+                    tab,
+                    stock_service=stock_service,
+                    info=info,
+                    period=period,
+                    ticker=ticker,
+                    force_refresh=force_refresh,
+                )
 
-            st_tabs = st.tabs([t.title for t in tabs])
-            for tab, st_tab in zip(tabs, st_tabs):
-                with st_tab:
-                    tab.safe_render(
-                        stock_service=stock_service,
-                        info=info,
-                        period=period,
-                        ticker=ticker,
-                        metrics=metrics,
-                    )
+        logger.info(f"Dashboard actualizado para {ticker}")
 
-            logger.info(f"Dashboard actualizado para {ticker}")
-
-        except (YFException, psycopg.Error, KeyError, ValueError) as e:
-            st.error(f"Error al obtener datos: {str(e)}")
-            logger.error(f"Error en main: {str(e)}")
+    except (YFException, psycopg.Error, KeyError, ValueError) as e:
+        st.error(f"Error al obtener datos: {str(e)}")
+        logger.error(f"Error en main: {str(e)}")
 
 
 if __name__ == "__main__":

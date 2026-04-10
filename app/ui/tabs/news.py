@@ -7,6 +7,7 @@ from typing import Any
 import streamlit as st
 
 from app.domain.services.protocols import StockDataFetcherProtocol
+from app.ui.components.loading import fetch_with_spinner
 from app.ui.tabs.base import BaseTab
 
 
@@ -21,7 +22,7 @@ class NewsTab(BaseTab):
         ticker: str = kwargs["ticker"]
 
         st.subheader(f"Últimas Noticias de {ticker}")
-        news = stock_service.get_news()
+        news = fetch_with_spinner("Cargando noticias...", stock_service.get_news)
 
         if not news:
             st.info("No se encontraron noticias recientes para este ticker.")
