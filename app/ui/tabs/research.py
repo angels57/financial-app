@@ -10,6 +10,7 @@ from app.domain.services import (
     available_models,
     workflow,
 )
+from app.db.cache_repo import CacheRepository
 from app.ui.tabs.base import BaseTab
 
 logger = logging.getLogger(__name__)
@@ -31,8 +32,15 @@ class ResearchTab(BaseTab):
     def render(self, **kwargs: Any) -> None:
         """Renderiza el tab de research."""
         info: StockInfo = kwargs["info"]
+        cache_repo: CacheRepository | None = kwargs.get("cache_repo")  # type: ignore[assignment]
 
         cache_key = f"research_{info.ticker}"
+
+        # -- Cargar de PostgreSQL si no está en session_state --------
+        if cache_key not in st.session_state and cache_repo is not None:
+            cached_report = cache_repo.get_research_report(info.ticker)
+            if cached_report:
+                st.session_state[cache_key] = cached_report
 
         # -- Selector de modelo ------------------------------------------
         with st.expander("⚙️  Configurar modelo", expanded=False):
@@ -92,6 +100,11 @@ class ResearchTab(BaseTab):
                     report_text = last_step["synthesize"]["final_report"]
                     status.update(label="✅ Reporte completado", state="complete")
                     st.session_state[cache_key] = report_text
+                    # Persistir en PostgreSQL
+                    if cache_repo is not None:
+                        cache_repo.upsert_research_report(
+                            info.ticker, report_text, str(provider), "workflow"
+                        )
                 except Exception as e:
                     status.update(label="❌ Error", state="error")
                     st.error(f"Error: {e}")

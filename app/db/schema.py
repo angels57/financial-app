@@ -58,6 +58,15 @@ CREATE TABLE IF NOT EXISTS technical_indicators_cache (
     fetched_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
     PRIMARY KEY (ticker, indicator, interval, time_period)
 );
+
+CREATE TABLE IF NOT EXISTS research_reports (
+    ticker TEXT NOT NULL REFERENCES consulted_companies(ticker) ON DELETE CASCADE,
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL,
+    report_md TEXT NOT NULL,
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (ticker)
+);
 """
 
 

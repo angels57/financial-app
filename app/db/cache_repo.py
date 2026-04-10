@@ -25,6 +25,7 @@ class CacheRepository:
     def upsert_consulted_company(
         self, ticker: str, short_name: str, sector: str
     ) -> None:
+        """Upsert a consulted company."""
         with self._pool.connection() as conn:
             conn.execute(
                 """
@@ -157,6 +158,36 @@ class CacheRepository:
                     fetched_at = now()
                 """,
                 (ticker, statement, source, data),
+            )
+            conn.commit()
+
+    # -- Research Reports Cache -----------------------------------------------
+
+    def get_research_report(self, ticker: str) -> str | None:
+        with self._pool.connection() as conn:
+            row = conn.execute(
+                "SELECT report_md FROM research_reports WHERE ticker = %s",
+                (ticker,),
+            ).fetchone()
+        if row is None:
+            return None
+        return row[0]
+
+    def upsert_research_report(
+        self, ticker: str, report_md: str, provider: str, model: str
+    ) -> None:
+        with self._pool.connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO research_reports (ticker, provider, model, report_md)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (ticker) DO UPDATE
+                SET provider = EXCLUDED.provider,
+                    model = EXCLUDED.model,
+                    report_md = EXCLUDED.report_md,
+                    fetched_at = now()
+                """,
+                (ticker, provider, model, report_md),
             )
             conn.commit()
 

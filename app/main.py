@@ -17,19 +17,8 @@ from app.ui import (
     TechnicalTab,
     render_sidebar,
 )
-from app.ui.tabs.base import BaseTab
 
 logger = get_app_logger("")
-
-
-def _render_tab_as_fragment(tab: BaseTab, **kwargs: object) -> None:
-    """Wrap a tab's safe_render in a @st.fragment so each tab re-renders independently."""
-
-    @st.fragment
-    def _inner() -> None:
-        tab.safe_render(**kwargs)
-
-    _inner()
 
 
 def _init_database() -> CacheRepository | None:
@@ -83,13 +72,13 @@ def main() -> None:
         st_tabs = st.tabs([t.title for t in tabs])
         for tab, st_tab in zip(tabs, st_tabs):
             with st_tab:
-                _render_tab_as_fragment(
-                    tab,
+                tab.safe_render(
                     stock_service=stock_service,
                     info=info,
                     period=period,
                     ticker=ticker,
                     force_refresh=force_refresh,
+                    cache_repo=cache_repo,
                 )
 
         logger.info(f"Dashboard actualizado para {ticker}")
