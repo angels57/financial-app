@@ -108,8 +108,8 @@ def calculate_52_week_delta(
 
 
 def draw_plotly_bar_chart(
-    values: list,
-    labels: list,
+    values: list[float],
+    labels: list[str],
     title: str,
     ylabel: str,
     color: str = "#1f77b4",
@@ -153,7 +153,7 @@ def draw_plotly_bar_chart(
 
 
 def draw_plotly_multi_line_chart(
-    data: dict,
+    data: dict[str, dict[str, list[str] | list[float]]],
     title: str,
     ylabel: str,
     is_percent: bool = False,
@@ -199,9 +199,9 @@ def draw_plotly_multi_line_chart(
 
 
 def draw_plotly_dual_axis_chart(
-    bar_values: list,
-    line_values: list,
-    labels: list,
+    bar_values: list[float],
+    line_values: list[float],
+    labels: list[str],
     title: str,
     bar_label: str,
     line_label: str,

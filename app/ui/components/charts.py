@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -342,9 +344,9 @@ class _TechnicalChartBuilder:
         showlegend: bool = True,
         yaxis2_title: str | None = None,
         yaxis3_title: str | None = None,
-        legend: dict | None = None,
+        legend: dict[str, Any] | None = None,
     ) -> None:
-        layout_updates: dict = {
+        layout_updates: dict[str, Any] = {
             xaxis_key: {
                 "rangeselector": {"buttons": self._RANGESELECTOR_BUTTONS},
                 "rangeslider": {"visible": True},
@@ -359,8 +361,7 @@ class _TechnicalChartBuilder:
             layout_updates["yaxis2_title"] = yaxis2_title
         if legend:
             layout_updates["legend"] = legend
-        # layout_updates built dynamically with str keys; plotly accepts them at runtime
-        fig.update_layout(**layout_updates)  # type: ignore[arg-type]
+        fig.update_layout(**layout_updates)
         if yaxis3_title:
             fig.update_layout(yaxis3_title=yaxis3_title)
 

@@ -4,6 +4,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from io import StringIO
+from typing import Any
 
 import pandas as pd
 from psycopg_pool import ConnectionPool
@@ -38,7 +39,7 @@ class CacheRepository:
             )
             conn.commit()
 
-    def get_consulted_companies(self) -> list[dict]:
+    def get_consulted_companies(self) -> list[dict[str, Any]]:
         with self._pool.connection() as conn:
             rows = conn.execute(
                 "SELECT ticker, short_name, sector, last_queried "

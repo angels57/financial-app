@@ -40,7 +40,7 @@ class YFinanceClient:
     def __init__(self, ticker: str, *, cache_repo: CacheRepository | None = None):
         validated: str = require_valid_ticker(ticker)
         self._ticker = validated
-        self._yf = yf.Ticker(validated)  # type: ignore[attr-defined]
+        self._yf = yf.Ticker(validated)  # type: ignore[attr-defined]  # type: ignore[attr-defined]
         self._mapper = YFinanceMapper()
         self._tech_service = YfinanceTechnicalService()
         self._tech_source = "yfinance"
@@ -212,8 +212,7 @@ class YFinanceClient:
             try:
                 cached = self._cache.get_news(self._ticker)
                 if cached is not None:
-                    # cache returns list[NewsItem] at runtime; mypy sees loose type from Any
-                    return cached  # type: ignore[no-any-return]
+                    return cached
             except _CacheError:
                 logger.warning("Cache read failed for news/%s", self._ticker)
 
@@ -266,8 +265,7 @@ class YFinanceClient:
         """Calculate multiple SMAs using local yfinance data."""
         if periods is None:
             periods = [20, 50, 100, 200]
-        # service returns compatible but non-identical dict type
-        return self._tech_service.get_multiple_sma(self._ticker, interval, periods)  # type: ignore[no-any-return]
+        return self._tech_service.get_multiple_sma(self._ticker, interval, periods)
 
     def _cached_indicator(
         self,
@@ -290,8 +288,7 @@ class YFinanceClient:
                     settings.price_cache_ttl_seconds,
                 )
                 if cached is not None:
-                    # cache returns dict[str,float] at runtime; mypy sees loose type from Any
-                    return cached  # type: ignore[no-any-return]
+                    return cached
             except _CacheError:
                 logger.warning("Cache read failed for %s/%s", indicator, self._ticker)
 

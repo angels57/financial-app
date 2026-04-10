@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from app.domain.models import NewsItem, StockInfo
 
 
@@ -9,7 +11,9 @@ class YFinanceMapper:
     """Maps yfinance raw data to domain models."""
 
     @staticmethod
-    def to_stock_info(ticker: str, yf_info: dict, yf_ticker) -> StockInfo:
+    def to_stock_info(
+        ticker: str, yf_info: dict[str, Any], yf_ticker: Any
+    ) -> StockInfo:
         """Convert yfinance info dict to StockInfo domain model."""
         price = yf_info.get("currentPrice") or yf_info.get("regularMarketPrice")
         if price is None:
@@ -57,7 +61,7 @@ class YFinanceMapper:
         )
 
     @staticmethod
-    def to_news_items(ticker: str, yf_news: list) -> list[NewsItem]:
+    def to_news_items(ticker: str, yf_news: list[dict[str, Any]]) -> list[NewsItem]:
         """Convert yfinance news to NewsItem domain models."""
         items = []
         for item in yf_news:

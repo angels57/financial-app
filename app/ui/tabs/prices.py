@@ -47,7 +47,9 @@ class PricesTab(BaseTab):
         st.markdown("---")
         self._render_fair_value_comparison(buy_prices, info.price, t)
 
-    def _render_inputs(self, info: StockInfo, t: str) -> tuple:
+    def _render_inputs(
+        self, info: StockInfo, t: str
+    ) -> tuple[float, float, float, float, float, float]:
         per_default = float(info.pe_ratio or 0)
         ps_default = float(info.price_to_sales or 0)
         pfcf_default = float(info.price_to_fcf or 0)
@@ -208,7 +210,7 @@ class PricesTab(BaseTab):
         t: str = "",
     ) -> float:
         @st.fragment
-        def _fragment():
+        def _fragment() -> None:
             st.subheader("Precios Futuros (Proyección)")
 
             shares = st.session_state.get(f"shares_{t}", 0.0)
@@ -313,7 +315,7 @@ class PricesTab(BaseTab):
         t: str = "",
     ) -> None:
         @st.fragment
-        def _fragment():
+        def _fragment() -> None:
             st.subheader("Rentabilidad Esperada")
             future_avg = st.session_state.get(f"future_avg_{t}", precio_futuro)
 
@@ -359,7 +361,7 @@ class PricesTab(BaseTab):
         self, precio_promedio: float, precio_actual: float, t: str = ""
     ) -> None:
         @st.fragment
-        def _fragment():
+        def _fragment() -> None:
             st.subheader("Comparación con Fair Values Externos")
             if t:
                 st.link_button(

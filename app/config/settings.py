@@ -36,7 +36,7 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Obtiene la configuración de la aplicación."""
     # pydantic-settings BaseSettings has known mypy incompatibility with env var inference
-    return Settings()  # type: ignore[call-arg]
+    return Settings()
 
 
 settings = get_settings()
