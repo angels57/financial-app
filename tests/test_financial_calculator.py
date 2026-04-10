@@ -3,7 +3,7 @@
 import pandas as pd
 import pytest
 
-from services import FinancialCalculator
+from app.domain.services import FinancialCalculator
 
 
 class TestExtractYears:

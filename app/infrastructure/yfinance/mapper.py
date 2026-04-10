@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from domain.models import NewsItem, StockInfo
+from app.domain.models import NewsItem, StockInfo
 
 
 class YFinanceMapper:

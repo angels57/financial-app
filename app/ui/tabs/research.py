@@ -4,12 +4,25 @@ import streamlit as st
 
 from typing import Any
 import logging
-from app.domain.models import StockInfo, FinancialMetrics
-from app.domain.services import research_service, all_providers, available_models
+from app.domain.models import StockInfo
+from app.domain.services import (
+    all_providers,
+    available_models,
+    workflow,
+)
 from app.ui.tabs.base import BaseTab
-from app.utils import format_large_number
 
 logger = logging.getLogger(__name__)
+
+NODE_LABELS = {
+    "collect_data": "📊 Recopilando datos financieros...",
+    "research": "🔍 Investigando en fuentes externas...",
+    "company": "🏢 Analizando modelo de negocio y competencia...",
+    "financials": "📈 Analizando crecimiento, márgenes y FCF...",
+    "macro": "🌍 Evaluando entorno macro y valoración...",
+    "mgmt": "👔 Generando resumen y recomendación...",
+    "synthesize": "📝 Compilando reporte final...",
+}
 
 
 class ResearchTab(BaseTab):
@@ -18,7 +31,6 @@ class ResearchTab(BaseTab):
     def render(self, **kwargs: Any) -> None:
         """Renderiza el tab de research."""
         info: StockInfo = kwargs["info"]
-        metrics: FinancialMetrics = kwargs["metrics"]
 
         cache_key = f"research_{info.ticker}"
 
@@ -33,7 +45,7 @@ class ResearchTab(BaseTab):
                     key="research_provider_select",
                 )
             with col2:
-                model = st.selectbox(
+                st.selectbox(
                     "Modelo",
                     options=available_models(provider),
                     key=f"research_model_select_{provider}",
@@ -54,42 +66,36 @@ class ResearchTab(BaseTab):
                     st.rerun()
         # -- Generación con streaming ------------------------------------
         if generate and cache_key not in st.session_state:
-            context = self._build_context(info, metrics)
-            report_text = ""
-
             with st.status(
-                f"Investigando {info.ticker} con {model}...", expanded=True
+                f"Generando reporte profundo para {info.ticker}...",
+                expanded=True,
             ) as status:
-                st.write(f"Provider: `{provider}` · Modelo: `{model}`")
                 try:
-                    for chunk in research_service.generate_report(
-                        ticker=info.ticker,
-                        context=context,
-                        provider=provider,
-                        model=model,
+                    # Ejecutar el workflow nodo por nodo con stream
+                    last_step: dict[str, dict[str, str]] = {}
+                    for step in workflow.stream(  # type: ignore[call-overload]
+                        {"ticker": info.ticker}, stream_mode="updates"
                     ):
-                        report_text += chunk
-                    status.update(label="Reporte completado", state="complete")
+                        last_step.update(step)
+                        for node_name in step:
+                            label = NODE_LABELS.get(node_name, node_name)
+                            st.write(f"✅ {label}")
+
+                    logger.info(f"Nodos completados: {list(last_step.keys())}")
+
+                    if "synthesize" not in last_step:
+                        raise RuntimeError(
+                            f"El grafo no llegó al nodo 'synthesize'. "
+                            f"Nodos completados: {list(last_step.keys())}"
+                        )
+
+                    report_text = last_step["synthesize"]["final_report"]
+                    status.update(label="✅ Reporte completado", state="complete")
                     st.session_state[cache_key] = report_text
                 except Exception as e:
-                    status.update(label="Error", state="error")
+                    status.update(label="❌ Error", state="error")
                     st.error(f"Error: {e}")
                     logger.error(f"Error al generar reporte: {e}")
-            placeholder = st.empty()
-            placeholder.markdown(report_text)
         # -- Mostrar reporte cacheado ------------------------------------
         elif cache_key in st.session_state:
             st.markdown(st.session_state[cache_key])
-
-    @staticmethod
-    def _build_context(info: StockInfo, metrics: FinancialMetrics) -> str:
-        return f"""
-        Ticker: {info.ticker} | {info.short_name}
-        Sector: {info.sector} | País: {info.country}
-        Precio: {info.currency} {info.price:,.2f}
-        Market Cap: {format_large_number(info.market_cap)}
-        P/E: {info.pe_ratio} | EPS: {info.eps}
-        Revenue (último año): {metrics.revenue_billions[0] if metrics.revenue_billions else "N/A"}B
-        Net Margin: {metrics.net_margin[0] if metrics.net_margin else "N/A"}%
-        FCF: {metrics.fcf_billions[0] if metrics.fcf_billions else "N/A"}B
-        """

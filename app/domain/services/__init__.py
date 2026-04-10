@@ -9,6 +9,7 @@ from app.domain.services.protocols import (
 )
 from app.domain.services.research_llm import get_llm, all_providers, available_models
 from app.domain.services.research_service import generate_report
+from app.domain.services.research_nodos import workflow
 
 __all__ = [
     "FinancialCalculator",
@@ -20,4 +21,5 @@ __all__ = [
     "generate_report",
     "all_providers",
     "available_models",
+    "workflow",
 ]

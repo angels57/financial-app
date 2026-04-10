@@ -2,9 +2,9 @@
 
 import pytest
 
-from models import StockInfo
-from ui.tabs.base import BaseTab
-from ui.tabs.prices import PricesTab
+from app.domain.models import StockInfo
+from app.ui.tabs.base import BaseTab
+from app.ui.tabs.prices import PricesTab
 
 
 @pytest.fixture

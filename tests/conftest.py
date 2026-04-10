@@ -11,6 +11,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "app"))
 
+from db.cache_repo import CacheRepository
+
 
 @pytest.fixture
 def sample_financials_data() -> pd.DataFrame:
@@ -175,7 +177,7 @@ class FakeCacheRepository:
 
 
 @pytest.fixture
-def fake_cache_repo() -> FakeCacheRepository:
+def fake_cache_repo() -> CacheRepository:  # type: ignore[override]
     """In-memory fake CacheRepository for unit testing without a DB."""
     return FakeCacheRepository()
 
