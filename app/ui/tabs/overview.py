@@ -135,10 +135,9 @@ class OverviewTab(BaseTab):
         ticker: str = kwargs["ticker"]
         force_refresh: bool = bool(kwargs.get("force_refresh", False))
 
-        with st.spinner("Cargando datos financieros..."):
-            financials = stock_service.get_financials(force_refresh=force_refresh)
-            balance = stock_service.get_balance_sheet(force_refresh=force_refresh)
-            cashflow = stock_service.get_cashflow(force_refresh=force_refresh)
+        financials = stock_service.get_financials(force_refresh=force_refresh)
+        balance = stock_service.get_balance_sheet(force_refresh=force_refresh)
+        cashflow = stock_service.get_cashflow(force_refresh=force_refresh)
 
         metrics: FinancialMetrics = FinancialCalculator().compute(
             financials=financials,

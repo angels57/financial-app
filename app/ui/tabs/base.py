@@ -17,12 +17,13 @@ class BaseTab(ABC):
         self.title = title
 
     def safe_render(self, **kwargs: object) -> None:
-        """Render with error boundary — prevents one tab from crashing the whole app."""
-        try:
-            self.render(**kwargs)
-        except Exception as e:
-            st.error(f"Error al renderizar {self.title}: {e}")
-            logger.exception("Error rendering tab %s", self.title)
+        """Render with error boundary and loading spinner — prevents one tab from crashing the whole app."""
+        with st.spinner(f"Cargando {self.title}..."):
+            try:
+                self.render(**kwargs)
+            except Exception as e:
+                st.error(f"Error al renderizar {self.title}: {e}")
+                logger.exception("Error rendering tab %s", self.title)
 
     @abstractmethod
     def render(self, **kwargs: object) -> None: ...

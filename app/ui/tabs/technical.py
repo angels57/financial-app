@@ -95,10 +95,9 @@ class TechnicalTab(BaseTab):
         if hasattr(stock_service, "set_technical_source"):
             stock_service.set_technical_source(st.session_state["tech_source"])
 
-        with st.spinner("Cargando indicadores..."):
-            sma_data, rsi_data = self._fetch_indicator_data(
-                stock_service, interval, selected_periods
-            )
+        sma_data, rsi_data = self._fetch_indicator_data(
+            stock_service, interval, selected_periods
+        )
 
         hist = stock_service.get_history(period=period)
 
