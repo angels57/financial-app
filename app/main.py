@@ -4,7 +4,7 @@ import psycopg
 import streamlit as st
 from yfinance.exceptions import YFException
 
-from app.config.settings import settings
+from app.config import settings
 from app.core import get_app_logger, init_monitoring
 from app.db import get_pool, init_db
 from app.db.cache_repo import CacheRepository
